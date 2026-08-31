@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Добавление</title>
+    <link rel="stylesheet" href="/static/styles/heating_style.css">
+</head>
+<body>
+<div class="app-viewport">
+    <div class="app-content">
+        <div class="form-container">
+            <h2 class="form-title">Добавить расчет (Черновик)</h2>
+
+            <form action="#" method="POST" onsubmit="return false;">
+                <div class="form-section-label">Медиа</div>
+                <div class="form-group">
+                    <label>Изображение:</label>
+                    <input type="text" value="{{ .draft.ImageURL }}">
+                </div>
+                <div class="form-group">
+                    <label>Видео:</label>
+                    <input type="text" value="{{ .draft.VideoURL }}">
+                </div>
+
+                <div class="form-section-label">Информация</div>
+                <div class="form-group">
+                    <label>Название:</label>
+                    <input type="text" value="{{ .draft.Title }}">
+                </div>
+                <div class="form-group">
+                    <label>Описание:</label>
+                    <textarea rows="2">{{ .draft.Description }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Площадь дома (м²):</label>
+                    <input type="number" value="{{ .draft.HouseArea }}">
+                </div>
+                <div class="form-group">
+                    <label>Тип отопления:</label>
+                    <input type="text" value="{{ .draft.FuelType }}">
+                </div>
+                <div class="form-group">
+                    <label>Средняя температура (°C):</label>
+                    <input type="text" value="{{ .draft.AvgTemp }}">
+                </div>
+                <div class="form-group">
+                    <label>Тариф (руб):</label>
+                    <input type="text" value="{{ .draft.TariffRate }}">
+                </div>
+                <div class="form-group">
+                    <label>Продолжительность сезона (дней):</label>
+                    <input type="number" value="{{ .draft.SeasonDays }}">
+                </div>
+                <div class="form-group">
+                    <label>Стоимость за сезон (руб):</label>
+                    <input type="number" value="{{ .draft.SeasonCost }}">
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Нижний таббар -->
+    <nav class="bottom-nav">
+        <a href="/feed" class="nav-item"> Лента</a>
+        <a href="/draft" class="nav-item active"> Добавление</a>
+        <a href="/grid" class="nav-item"> Плитка</a>
+    </nav>
+</div>
+</body>
+</html>
