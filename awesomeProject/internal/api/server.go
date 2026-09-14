@@ -7,11 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// StartServer запускает веб-сервер
+
 func StartServer() {
 	r := gin.Default()
 
-	// Указываем путь к твоим CSS из папки resources
+	
 	r.Static("/static", "./resources")
 	r.LoadHTMLGlob("templates/*")
 

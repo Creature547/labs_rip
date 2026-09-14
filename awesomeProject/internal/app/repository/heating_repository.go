@@ -10,7 +10,7 @@ type HeatingRepository interface {
 	GetNextPublished(currentID int) (*model.HeatingCalculation, error)
 	GetFirstPublished() (*model.HeatingCalculation, error)
 	GetDraft() (*model.HeatingCalculation, error)
-	GetAllPublished(minArea int) []model.HeatingCalculation
+	GetAllPublished(minPower float64) []model.HeatingCalculation
 }
 
 type inMemoryHeatingRepository struct {
@@ -22,92 +22,57 @@ func NewInMemoryHeatingRepository() HeatingRepository {
 		items: []model.HeatingCalculation{
 			{
 				ID:          1,
-				Title:       "Коттедж в Подмосковье",
-				Description: "Расчет системы отопления для двухэтажного дома с электрическим котлом и водяным теплым полом на первом этаже.",
-				ImageURL:    "http://localhost:9000/heating-bucket/cottage.jpg",
-				VideoURL:    "http://localhost:9000/heating-bucket/cottage.mp4",
+				Title:       "Цилиндрическая печь",
+				Description: "Современная цилиндрическая печь-камин сочетает стильный панорамный обзор огня и высокую отдачу тепла. Она идеально подходит для эффективного обогрева загородных домов и коттеджей среднего размера. Компактный корпус позволяет легко вписать её в любой современный интерьер.",
+				ImageURL:    "http://127.0.0.1:9000/heating/%D0%A6%D0%B8%D0%BB%D0%B8%D0%BD%D0%B4%D1%80%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B0%D1%8F%20%D0%BF%D0%B5%D1%87%D1%8C.png",
+				VideoURL:    "http://127.0.0.1:9000/heating/%D0%A6%D0%B8%D0%BB%D0%B8%D0%BD%D0%B4%D1%80%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B0%D1%8F%20%D0%BF%D0%B5%D1%87%D1%8C.mp4",
 				Status:      model.StatusPublished,
-				HouseArea:   250,
-				FuelType:    "Электричество",
-				AvgTemp:     -5.5,
-				TariffRate:  7.5,
-				SeasonDays:  210,
-				SeasonCost:  85000,
+				Power:       7.0,
+				Cost:        85000,
 				Likes:       []model.UserLike{{UserID: 101}, {UserID: 102}},
 			},
 			{
 				ID:          2,
-				Title:       "Загородный дом (Газ)",
-				Description: "Оптимальный расчет при подключении магистрального газа. Высокий КПД и минимальные эксплуатационные расходы.",
-				ImageURL:    "http://localhost:9000/heating-bucket/gas_house.jpg",
-				VideoURL:    "http://localhost:9000/heating-bucket/gas_house.mp4",
+				Title:       "Бойлер (косвенного нагрева)",
+				Description: "Высокопроизводительный бойлер косвенного нагрева обеспечивает стабильную подачу горячей воды для всей семьи. Прибор подключается к основному котлу отопления и поддерживает заданную температуру с минимальными энергозатратами. Надежная теплоизоляция долго сохраняет воду горячей.",
+				ImageURL:    "http://127.0.0.1:9000/heating/%D0%91%D0%BE%D0%B9%D0%BB%D0%B5%D1%80.png",
+				VideoURL:    "http://127.0.0.1:9000/heating/%D0%B1%D0%BE%D0%B9%D0%BB%D0%B5%D1%80%D1%8B.mp4",
 				Status:      model.StatusPublished,
-				HouseArea:   180,
-				FuelType:    "Магистральный газ",
-				AvgTemp:     -4.0,
-				TariffRate:  6.8,
-				SeasonDays:  180,
-				SeasonCost:  32000,
-				Likes:       []model.UserLike{{UserID: 101}, {UserID: 103}, {UserID: 104}, {UserID: 105}},
+				Power:       24.0,
+				Cost:        65000,
+				Likes:       []model.UserLike{{UserID: 101}, {UserID: 103}, {UserID: 104}},
 			},
 			{
 				ID:          3,
-				Title:       "Дачный дом (Пеллеты)",
-				Description: "Автономное отопление твердотопливным пеллетным котлом для регионов без газификации.",
-				ImageURL:    "http://localhost:9000/heating-bucket/dacha.jpg",
-				VideoURL:    "http://localhost:9000/heating-bucket/dacha.mp4",
+				Title:       "Электрическая печь (Электрокамин)",
+				Description: "Электрический камин с реалистичным эффектом живого пламени создаст уютную атмосферу в доме без дыма и копоти. Прибор оснащен быстрым обогревом и удобной регулировкой интенсивности горения. Отлично подходит для безопасного использования в квартирах и жилых комнатах.",
+				ImageURL:    "http://127.0.0.1:9000/heating/%D0%AD%D0%BB%D0%B5%D0%BA%D1%82%D1%80%D0%BE%D0%BA%D0%B0%D0%BC%D0%B8%D0%BD.png",
+				VideoURL:    "http://127.0.0.1:9000/heating/%D1%8D%D0%BB%D0%B5%D0%BA%D1%82%D1%80%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B0%D1%8F%20%D0%BF%D0%B5%D1%87%D1%8C%20%D1%81%20%D0%B8%D0%B7%D0%BE%D0%B1%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%D0%BC%20%D0%BA%D0%B0%D0%BC%D0%B8%D0%BD%D0%B0.mp4",
 				Status:      model.StatusPublished,
-				HouseArea:   100,
-				FuelType:    "Пеллеты",
-				AvgTemp:     -6.0,
-				TariffRate:  9.0,
-				SeasonDays:  150,
-				SeasonCost:  45000,
+				Power:       3.0,
+				Cost:        35000,
 				Likes:       []model.UserLike{{UserID: 102}},
 			},
 			{
 				ID:          4,
-				Title:       "Таунхаус (Тепловой насос)",
-				Description: "Современная геотермальная система отопления с минимальным энергопотреблением.",
-				ImageURL:    "http://localhost:9000/heating-bucket/townhouse.jpg",
-				VideoURL:    "http://localhost:9000/heating-bucket/townhouse.mp4",
+				Title:       "Теплогенератор",
+				Description: "Мощный промышленный теплогенератор предназначен для быстрого и эффективного обогрева больших площадей, складов и производственных цехов. Высокий КПД и прочный металлический корпус гарантируют надежную работу в жестких условиях. Работает с системами принудительной вентиляции и подачи воздуха.",
+				ImageURL:    "http://127.0.0.1:9000/heating/%D0%A2%D0%B5%D0%BF%D0%BB%D0%BE%D0%B3%D0%B5%D0%BD%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80.png",
+				VideoURL:    "http://127.0.0.1:9000/heating/%D0%9F%D1%80%D0%BE%D0%BC%D1%8B%D1%88%D0%BB%D0%B5%D0%BD%D0%BD%D1%8B%D0%B9%20%D1%82%D0%B5%D0%BF%D0%BB%D0%BE%D0%B3%D0%B5%D0%BD%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80.mp4",
 				Status:      model.StatusPublished,
-				HouseArea:   140,
-				FuelType:    "Тепловой насос",
-				AvgTemp:     -3.0,
-				TariffRate:  5.2,
-				SeasonDays:  200,
-				SeasonCost:  28000,
-				Likes:       []model.UserLike{{UserID: 101}, {UserID: 106}, {UserID: 107}},
+				Power:       200.0,
+				Cost:        200000,
+				Likes:       []model.UserLike{{UserID: 101}, {UserID: 106}, {UserID: 107}, {UserID: 108}, {UserID: 109}, {UserID: 110}, {UserID: 111}, {UserID: 112}, {UserID: 113}, {UserID: 114}},
 			},
 			{
 				ID:          5,
-				Title:       "Новый черновик расчета",
-				Description: "Предварительные параметры для строящегося объекта.",
-				ImageURL:    "http://localhost:9000/heating-bucket/draft.jpg",
-				VideoURL:    "http://localhost:9000/heating-bucket/draft.mp4",
-				Status:      model.StatusDraft, // Единственный черновик
-				HouseArea:   120,
-				FuelType:    "Дрова / Уголь",
-				AvgTemp:     -5.0,
-				TariffRate:  4.5,
-				SeasonDays:  180,
-				SeasonCost:  30000,
-				Likes:       []model.UserLike{},
-			},
-			{
-				ID:          6,
-				Title:       "Удаленный объект",
-				Description: "Архивная запись.",
+				Title:       "Новое устройство (Черновик)",
+				Description: "Предварительное описание для нового отопительного прибора.",
 				ImageURL:    "",
 				VideoURL:    "",
-				Status:      model.StatusDeleted, // Не отображается в интерфейсе
-				HouseArea:   300,
-				FuelType:    "Дизель",
-				AvgTemp:     -10.0,
-				TariffRate:  12.0,
-				SeasonDays:  210,
-				SeasonCost:  150000,
+				Status:      model.StatusDraft,
+				Power:       5.0,
+				Cost:        40000,
 				Likes:       []model.UserLike{},
 			},
 		},
@@ -120,7 +85,7 @@ func (r *inMemoryHeatingRepository) GetByID(id int) (*model.HeatingCalculation, 
 			return &item, nil
 		}
 	}
-	return nil, errors.New("расчет не найден")
+	return nil, errors.New("устройство не найдено")
 }
 
 func (r *inMemoryHeatingRepository) GetFirstPublished() (*model.HeatingCalculation, error) {
@@ -129,7 +94,7 @@ func (r *inMemoryHeatingRepository) GetFirstPublished() (*model.HeatingCalculati
 			return &item, nil
 		}
 	}
-	return nil, errors.New("нет опубликованных расчетов")
+	return nil, errors.New("нет опубликованных устройств")
 }
 
 func (r *inMemoryHeatingRepository) GetNextPublished(currentID int) (*model.HeatingCalculation, error) {
@@ -141,7 +106,7 @@ func (r *inMemoryHeatingRepository) GetNextPublished(currentID int) (*model.Heat
 	}
 
 	if len(published) == 0 {
-		return nil, errors.New("нет расчетов")
+		return nil, errors.New("нет устройств")
 	}
 
 	for i, item := range published {
@@ -163,11 +128,11 @@ func (r *inMemoryHeatingRepository) GetDraft() (*model.HeatingCalculation, error
 	return nil, errors.New("черновик не найден")
 }
 
-func (r *inMemoryHeatingRepository) GetAllPublished(minArea int) []model.HeatingCalculation {
+func (r *inMemoryHeatingRepository) GetAllPublished(minPower float64) []model.HeatingCalculation {
 	var result []model.HeatingCalculation
 	for _, item := range r.items {
 		if item.Status == model.StatusPublished {
-			if minArea == 0 || item.HouseArea >= minArea {
+			if minPower == 0 || item.Power >= minPower {
 				result = append(result, item)
 			}
 		}

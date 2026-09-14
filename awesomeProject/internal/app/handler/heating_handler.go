@@ -66,17 +66,21 @@ func (h *HeatingHandler) DraftHandler(c *gin.Context) {
 }
 
 func (h *HeatingHandler) GridHandler(c *gin.Context) {
-	minAreaStr := c.Query("min_area")
-	minArea := 0
-	if minAreaStr != "" {
-		minArea, _ = strconv.Atoi(minAreaStr)
+
+	minPowerStr := c.Query("min_power")
+	var minPower float64
+
+	if minPowerStr != "" {
+		parsedPower, err := strconv.ParseFloat(minPowerStr, 64)
+		if err == nil {
+			minPower = parsedPower
+		}
 	}
 
-	calculations := h.repo.GetAllPublished(minArea)
+	items := h.repo.GetAllPublished(minPower)
 
 	c.HTML(http.StatusOK, "grid.html", gin.H{
-		"calculations": calculations,
-		"min_area":     minAreaStr,
-		"active_page":  "grid",
+		"items":     items,
+		"min_power": minPowerStr,
 	})
 }

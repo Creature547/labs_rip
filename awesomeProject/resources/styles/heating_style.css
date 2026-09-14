@@ -13,7 +13,6 @@ body {
     min-height: 100vh;
 }
 
-
 .app-viewport {
     width: 375px;
     height: 812px;
@@ -30,13 +29,14 @@ body {
     flex: 1;
     position: relative;
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-width: none;
 }
 .app-content::-webkit-scrollbar {
     display: none;
 }
 
-
+/* 1. ЛЕНТА (FEED) */
 .feed-container {
     width: 100%;
     height: 100%;
@@ -57,7 +57,7 @@ body {
     left: 0;
     right: 0;
     padding: 16px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
     color: #ffffff;
     display: flex;
     flex-direction: column;
@@ -65,220 +65,392 @@ body {
 }
 
 .feed-title {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 800;
-    color: #000000; /* Заголовок на фоне светлой части */
-    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+    color: #ffffff;
+    /* Тень под заголовком */
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    margin-bottom: 4px;
 }
 
-/* Раскрытие "Больше/Меньше" */
-.description-details summary {
-    color: #000000;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
+/* Нижняя двухколоночная сетка */
+.feed-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
 }
 
-.description-details p {
-    font-size: 12px;
-    color: #333;
-    margin-top: 4px;
+/* Левая колонка с карточкой параметров и описанием */
+.feed-bottom-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0; /* Важно для обрезки текста */
 }
 
-/* Серая плашка с параметрами (как на макете) */
 .params-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px 12px;
-    font-size: 11px;
-    background: rgba(38, 44, 59, 0.85); /* Темно-серый полупрозрачный фон */
-    padding: 12px;
+    gap: 8px;
+    background: rgba(45, 55, 65, 0.7);
+    padding: 10px 14px;
     border-radius: 16px;
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
     color: #fff;
-    margin-top: 6px;
-}
-
-.params-grid div {
-    display: flex;
-    flex-direction: column;
-}
-
-.params-grid span {
-    font-size: 10px;
-    color: #a0a5b5; /* Серый подзаголовок */
-    margin-bottom: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    width: 100%;
+    margin: 0;
 }
 
 .params-grid strong {
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    display: block;
+    color: #A0AEC0;
+    margin-bottom: 2px;
+}
+
+.params-grid div {
+    font-size: 13px;
     font-weight: 700;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
-.feed-actions {
+/* Кнопки справа */
+.feed-side-actions {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    margin-top: 8px;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
-/* Лайки (серый баббл с красным сердцем) */
 .like-badge {
-    background: rgba(255, 255, 255, 0.25);
-    padding: 6px 12px;
+    background: rgba(45, 45, 45, 0.75);
+    backdrop-filter: blur(6px);
+    padding: 6px 14px;
     border-radius: 20px;
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 600;
     color: #fff;
     display: flex;
     align-items: center;
     gap: 4px;
 }
 
-/* Красная кнопка "Следующий ->" */
-.btn-next {
-    background-color: #B22222; /* Насыщенный красный цвет */
+.btn-next-arrow {
+    background-color: #E55D54;
     color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
+    width: 52px;
+    height: 34px;
+    border-radius: 18px;
     text-decoration: none;
-    font-size: 12px;
+    font-size: 18px;
     font-weight: bold;
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    transition: background-color 0.2s ease;
 }
-.btn-next:hover {
-    background-color: #8B0000;
+
+.btn-next-arrow:hover {
+    background-color: #d04b42;
+}
+
+.tiktok-description {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    color: #ffffff;
+    font-size: 12px;
+    line-height: 16px;
+    overflow: hidden;
+    /* Тень под описанием, чтобы читалось на любом фоне */
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.description-text {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.more-btn {
+    border: none;
+    background: none;
+    color: #e0e0e0;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 4px;
+    font-size: 12px;
+    /* Тень для кнопки "ещё" */
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+.tiktok-description.expanded {
+    display: block;
+    height: auto;
+}
+
+.tiktok-description.expanded .description-text {
+    white-space: normal;
+}
+
+.tiktok-description.expanded .more-btn {
+    display: none;
 }
 
 /* 2. СТРАНИЦА: ДОБАВЛЕНИЕ (ЧЕРНОВИК) */
 .form-container {
     padding: 16px;
-    background-color: #EEF2F5;
-    min-height: 100%;
+    background-color: #EBF0F3;
+    padding-bottom: 24px;
 }
-.form-title {
-    color: #1A5276;
-    margin-bottom: 12px;
+
+.form-header {
+    color: #E55D54;
     font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 14px;
 }
-.form-section-label {
-    font-size: 12px;
-    font-weight: bold;
-    color: #1A5276;
+
+/* Медиаблоки загрузки (как на макете) */
+.media-upload-block {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.upload-box {
+    background: #000;
+    border-radius: 12px;
+    height: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 8px;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+}
+
+.upload-box.image-box {
+    background-image: url('http://127.0.0.1:9000/heating/stove.jpg');
+}
+
+.upload-box.video-box {
+    background-image: url('http://127.0.0.1:9000/heating/fireplace.jpg');
+}
+
+.upload-label {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 10px;
+    color: #ffffff;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+.upload-btn {
+    background: rgba(255, 255, 255, 0.85);
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 10px;
+    color: #333;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+}
+
+.form-section-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #357592;
     text-transform: uppercase;
-    margin: 10px 0 6px 0;
+    margin: 14px 0 8px 0;
+    letter-spacing: 0.5px;
 }
+
 .form-group {
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
+
 .form-group label {
     display: block;
     font-size: 11px;
-    color: #2C3E50;
+    color: #333333;
+    margin-bottom: 4px;
     font-weight: 600;
-    margin-bottom: 2px;
 }
-.form-group input, .form-group textarea {
+
+.form-group input, 
+.form-group textarea, 
+.form-group select {
     width: 100%;
-    padding: 6px 10px;
-    border: 1px solid #ccc;
+    padding: 8px 10px;
+    border: 1px solid #CBD5E0;
+    border-radius: 8px;
+    font-size: 12px;
+    background: #fff;
+    color: #333;
+    outline: none;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 50px;
+}
+
+.two-col-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+/* Переключатель этажности */
+.floor-toggle {
+    display: flex;
+    background: #E2E8F0;
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+}
+
+.floor-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 6px 0;
+    font-size: 10px;
+    color: #4A5568;
     border-radius: 6px;
-    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.floor-btn.active {
+    background: #357592;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+/* 3. СТРАНИЦА: ПЛИТКА (GRID) */
+.grid-container {
+    padding: 16px;
+    background-color: #EBF0F3;
+    min-height: 100%;
+}
+
+.search-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #CBD5E0;
+    border-radius: 12px;
+    font-size: 12px;
     background: #fff;
 }
 
-/* 3. СТРАНИЦА: ПЛИТКА */
-.grid-container {
-    padding: 16px;
-    background-color: #EEF2F5;
-    min-height: 100%;
-}
-.search-form {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 12px;
-}
-.search-form input {
-    flex: 1;
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 13px;
-}
-.search-form button {
-    background-color: #1A5276;
+.search-btn {
+    background-color: #E55D54;
     color: white;
     border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
     cursor: pointer;
 }
+
 .card-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
 }
+
 .card-item {
-    background: white;
-    border-radius: 8px;
+    position: relative;
+    height: 140px;
+    border-radius: 14px;
     overflow: hidden;
-    text-decoration: none;
-    color: inherit;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    display: flex;
-    flex-direction: column;
-}
-.card-item img {
-    width: 100%;
-    height: 90px;
-    object-fit: cover;
-}
-.card-body {
-    padding: 8px;
-}
-.card-title {
-    font-size: 12px;
-    font-weight: bold;
-    color: #1A5276;
-    margin-bottom: 2px;
-}
-.card-sub {
-    font-size: 10px;
-    color: #666;
-}
-.card-likes {
-    font-size: 11px;
-    color: #B22222;
-    font-weight: bold;
-    margin-top: 4px;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-/* 4. ФИКСИРОВАННАЯ СИНЯЯ НИЖНЯЯ НАВИГАЦИЯ */
+.card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 100%);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    color: white;
+}
+
+.card-item-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 2px;
+    /* Тень для заголовков на карточках */
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+
+.card-item-sub {
+    font-size: 10px;
+    color: #f0f0f0;
+    font-weight: 600;
+    /* Тень для подписи (кВт и Руб) */
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.card-item-likes {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    font-size: 10px;
+    color: #fff;
+    font-weight: bold;
+    /* Тень для счётчика лайков на карточке */
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* 4. ТАББАР (НИЖНЯЯ НАВИГАЦИЯ) */
 .bottom-nav {
-    height: 64px;
-    background-color: #1A5276; /* Тёмно-синий цвет из Figma */
+    height: 60px;
+    min-height: 60px;
+    background-color: #357592;
     display: flex;
     justify-content: space-around;
     align-items: center;
-    z-index: 10;
+    z-index: 100;
     border-bottom-left-radius: 36px;
     border-bottom-right-radius: 36px;
 }
+
 .nav-item {
-    color: #85A3C3; /* Неактивные табы — приглушенный голубой */
+    color: #B0C4DE;
     text-decoration: none;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
 }
+
 .nav-item.active {
-    color: #ffffff; /* Активный таб "Лента" — чистый белый */
+    color: #ffffff;
     font-weight: bold;
 }

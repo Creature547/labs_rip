@@ -1,42 +1,51 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <title>Плитка</title>
-    <link rel="stylesheet" href="/static/styles/heating_style.css">
+    <link rel="stylesheet" href="/static/styles/heating_style.css?v=4">
 </head>
-<body>
-<div class="app-viewport">
-    <div class="app-content">
-        <div class="grid-container">
-            <!-- Поиск с сохранением введенного числа по ТЗ -->
-            <form action="/grid" method="GET" class="search-form">
-                <input type="number" name="min_area" placeholder="Мин. площадь (м²)" value="{{ .min_area }}">
-                <button type="submit">Найти</button>
-            </form>
 
-            <div class="card-grid">
-                {{ range .calculations }}
-                <!-- Переход в Ленту начиная с кликнутой карточки -->
-                <a href="/feed?id={{ .ID }}" class="card-item">
-                    <img src="{{ .ImageURL }}" alt="{{ .Title }}">
-                    <div class="card-body">
-                        <div class="card-title">{{ .Title }}</div>
-                        <div class="card-sub">{{ .HouseArea }} м² | {{ .SeasonCost }} ₽</div>
-                        <div class="card-likes">❤️ {{ .LikesCount }}</div>
+<body>
+    <div class="app-viewport">
+        <div class="app-content">
+            <div class="grid-container">
+
+                <!-- Поиск / Фильтр по минимальной мощности -->
+                <form action="/grid" method="GET" class="search-bar">
+                    <input 
+                        type="number" 
+                        name="min_power" 
+                        class="search-input" 
+                        placeholder="Мин. мощность, кВт"
+                        value="{{ .min_power }}">
+                    <button type="submit" class="search-btn">Найти</button>
+                </form>
+
+                <!-- Сетка карточек 2x2 -->
+                <div class="card-grid">
+                    {{ range .items }}
+                    <div class="card-item" style="background-image: url('{{ .ImageURL }}');">
+                        <div class="card-overlay">
+                            <div class="card-item-title">{{ .Title }}</div>
+                            <div class="card-item-sub">{{ .Power }} кВт · {{ .Cost }} ₽</div>
+                            <div class="card-item-likes">❤️ {{ len .Likes }}</div>
+                        </div>
                     </div>
-                </a>
-                {{ end }}
+                    {{ end }}
+                </div>
+
             </div>
         </div>
-    </div>
 
-    <!-- Нижний таббар -->
-    <nav class="bottom-nav">
-        <a href="/feed" class="nav-item"> Лента</a>
-        <a href="/draft" class="nav-item"> Добавление</a>
-        <a href="/grid" class="nav-item active"> Плитка</a>
-    </nav>
-</div>
+        <!-- Нижний таббар -->
+        <nav class="bottom-nav">
+            <a href="/feed" class="nav-item">Лента</a>
+            <a href="/draft" class="nav-item">Добавление</a>
+            <a href="/grid" class="nav-item active">Плитка</a>
+        </nav>
+    </div>
 </body>
+
 </html>

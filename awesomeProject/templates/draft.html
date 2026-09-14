@@ -1,70 +1,110 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
-    <title>Добавление</title>
-    <link rel="stylesheet" href="/static/styles/heating_style.css">
+    <title>Добавление расчета</title>
+    <link rel="stylesheet" href="/static/styles/heating_style.css?v=5">
 </head>
+
 <body>
-<div class="app-viewport">
-    <div class="app-content">
-        <div class="form-container">
-            <h2 class="form-title">Добавить расчет (Черновик)</h2>
+    <div class="app-viewport">
+        <div class="app-content">
+            <div class="form-container">
+                <div class="form-header">Добавить расчет (Черновик)</div>
 
-            <form action="#" method="POST" onsubmit="return false;">
-                <div class="form-section-label">Медиа</div>
-                <div class="form-group">
-                    <label>Изображение:</label>
-                    <input type="text" value="{{ .draft.ImageURL }}">
-                </div>
-                <div class="form-group">
-                    <label>Видео:</label>
-                    <input type="text" value="{{ .draft.VideoURL }}">
+                <!-- БЛОК ЗАГРУЗКИ МЕДИА -->
+                <div class="media-upload-block">
+                    <div class="upload-box image-box">
+                        <span class="upload-label">Загрузка изображения</span>
+                        <button type="button" class="upload-btn">Выбрать файл</button>
+                    </div>
+                    <div class="upload-box video-box">
+                        <span class="upload-label">Загрузка видео</span>
+                        <button type="button" class="upload-btn">Выбрать файл</button>
+                    </div>
                 </div>
 
-                <div class="form-section-label">Информация</div>
+                <!-- ПАРАМЕТРЫ УСТРОЙСТВА -->
+                <div class="form-section-title">ПАРАМЕТРЫ УСТРОЙСТВА</div>
+
                 <div class="form-group">
-                    <label>Название:</label>
-                    <input type="text" value="{{ .draft.Title }}">
+                    <label>Название устройства</label>
+                    <input type="text" value="{{ .draft.Title }}" placeholder="например, Печь-камин">
                 </div>
+
+                <div class="two-col-inputs">
+                    <div class="form-group">
+                        <label>Мощность, кВт</label>
+                        <input type="number" step="0.1" value="{{ .draft.Power }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Стоимость, ₽</label>
+                        <input type="number" value="{{ .draft.Cost }}">
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label>Описание:</label>
-                    <textarea rows="2">{{ .draft.Description }}</textarea>
+                    <label>Описание</label>
+                    <textarea rows="3">{{ .draft.Description }}</textarea>
                 </div>
+
+                <!-- ПАРАМЕТРЫ ПОМЕЩЕНИЯ -->
+                <div class="form-section-title">ПАРАМЕТРЫ ПОМЕЩЕНИЯ</div>
+
+                <div class="two-col-inputs">
+                    <div class="form-group">
+                        <label>Площадь, м²</label>
+                        <input type="number" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Высота потолков, м</label>
+                        <input type="number" step="0.1" value="2.7">
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label>Площадь дома (м²):</label>
-                    <input type="number" value="{{ .draft.HouseArea }}">
+                    <label>Этажность</label>
+                    <div class="floor-toggle">
+                        <button type="button" class="floor-btn active">1 этаж</button>
+                        <button type="button" class="floor-btn">Средний</button>
+                        <button type="button" class="floor-btn">Последний</button>
+                    </div>
                 </div>
+
                 <div class="form-group">
-                    <label>Тип отопления:</label>
-                    <input type="text" value="{{ .draft.FuelType }}">
+                    <label>Материал стен</label>
+                    <select>
+                        <option selected>Газобетонный блок</option>
+                        <option>Кирпич</option>
+                        <option>Деревянный брус</option>
+                        <option>Панельный</option>
+                    </select>
                 </div>
+
                 <div class="form-group">
-                    <label>Средняя температура (°C):</label>
-                    <input type="text" value="{{ .draft.AvgTemp }}">
+                    <label>Желаемая температура в доме, °C</label>
+                    <input type="number" value="22">
                 </div>
+
+                <!-- ТАРИФ -->
+                <div class="form-section-title">ТАРИФ</div>
+
                 <div class="form-group">
-                    <label>Тариф (руб):</label>
-                    <input type="text" value="{{ .draft.TariffRate }}">
+                    <label>Стоимость электроэнергии, ₽/кВт·ч</label>
+                    <input type="number" step="0.01" value="5.50">
                 </div>
-                <div class="form-group">
-                    <label>Продолжительность сезона (дней):</label>
-                    <input type="number" value="{{ .draft.SeasonDays }}">
-                </div>
-                <div class="form-group">
-                    <label>Стоимость за сезон (руб):</label>
-                    <input type="number" value="{{ .draft.SeasonCost }}">
-                </div>
-            </form>
+
+            </div>
         </div>
-    </div>
 
-    <!-- Нижний таббар -->
-    <nav class="bottom-nav">
-        <a href="/feed" class="nav-item"> Лента</a>
-        <a href="/draft" class="nav-item active"> Добавление</a>
-        <a href="/grid" class="nav-item"> Плитка</a>
-    </nav>
-</div>
+        <!-- Нижний фиксированный таббар -->
+        <nav class="bottom-nav">
+            <a href="/feed" class="nav-item">Лента</a>
+            <a href="/draft" class="nav-item active">Добавление</a>
+            <a href="/grid" class="nav-item">Плитка</a>
+        </nav>
+    </div>
 </body>
+
 </html>
