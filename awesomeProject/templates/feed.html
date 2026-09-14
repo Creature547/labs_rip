@@ -1,86 +1,57 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <title>Лента</title>
-    <link rel="stylesheet" href="/static/styles/heating_style.css?v=7">
+    <link rel="stylesheet" href="/static/styles/heating_style.css?v=12">
 </head>
-
 <body>
-    <div class="app-viewport">
-        <div class="app-content">
-            <div class="feed-container">
+<div class="app-viewport">
+    <div class="app-content">
+        <div class="feed-container">
+            <video class="feed-video" autoplay loop muted playsinline key="{{ .calculation.ID }}">
+                <source src="{{ .calculation.VideoURL }}" type="video/mp4">
+                Ваш браузер не поддерживает видео.
+            </video>
 
-                <video class="feed-video" autoplay loop muted playsinline key="{{ .calculation.ID }}">
-                    <source src="{{ .calculation.VideoURL }}" type="video/mp4">
-                    Ваш браузер не поддерживает видео.
-                </video>
-
-                <div class="feed-overlay">
-
-                    <!-- Заголовок сверху -->
-                    <div class="feed-title">
-                        {{ .calculation.Title }}
-                    </div>
-
-                    <!-- Основной нижний блок (Левая часть + Правые кнопки) -->
-                    <div class="feed-bottom-row">
-
-                        <!-- Левая колонка: плашка параметров + описание под ней -->
-                        <div class="feed-bottom-left">
-                            <div class="params-grid">
-                                <div>
-                                    <strong>Мощность</strong>
-                                    {{ .calculation.Power }} кВт
-                                </div>
-                                <div>
-                                    <strong>Стоимость</strong>
-                                    {{ .calculation.Cost }} рублей
-                                </div>
-                            </div>
-
-                            <div class="tiktok-description">
-                                <span class="description-text">
-                                    {{ .calculation.Description }}
-                                </span>
-                                <button class="more-btn" type="button">ещё</button>
-                            </div>
+            <div class="feed-overlay">
+                <div class="feed-title">{{ .calculation.Title }}</div>
+                <div class="feed-bottom-row">
+                    <div class="feed-bottom-left">
+                        <div class="params-grid">
+                            <div><strong>Мощность</strong>{{ .calculation.Power }} кВт</div>
+                            <div><strong>Стоимость</strong>{{ .calculation.Cost }} ₽</div>
                         </div>
 
-                        <!-- Правая колонка: Лайк и Стрелка -->
-                        <div class="feed-side-actions">
-                            <span class="like-badge">
-                                ❤️ {{ .likes_count }}
-                            </span>
-
-                            <a href="/feed?id={{ .calculation.ID }}&next=true" class="btn-next-arrow" title="Следующий">
-                                &#10140;
-                            </a>
+                        <div class="tiktok-description">
+                            <span class="description-text">{{ .calculation.Description }}</span>
+                            <button class="more-btn" type="button">ещё</button>
                         </div>
-
                     </div>
 
+                    <div class="feed-side-actions">
+                        <span class="like-badge">❤️ {{ .likes_count }}</span>
+                        <a href="/feed?id={{ .calculation.ID }}&next=true" class="btn-next-arrow" title="Следующий">&#10140;</a>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Нижняя навигация -->
-        <nav class="bottom-nav">
-            <a href="/feed" class="nav-item active">Лента</a>
-            <a href="/draft" class="nav-item">Добавление</a>
-            <a href="/grid" class="nav-item">Плитка</a>
-        </nav>
     </div>
 
-    <script>
-        document.querySelectorAll('.more-btn').forEach(function (button) {
-            button.addEventListener('click', function () {
-                const description = this.closest('.tiktok-description');
-                description.classList.add('expanded');
-            });
-        });
-    </script>
-</body>
+    <nav class="bottom-nav">
+        <a href="/feed" class="nav-item active">Лента</a>
+        <a href="/draft" class="nav-item">Добавление</a>
+        <a href="/grid" class="nav-item">Плитка</a>
+    </nav>
+</div>
 
+<script>
+    document.querySelectorAll('.more-btn').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const description = this.closest('.tiktok-description');
+            description.classList.add('expanded');
+        });
+    });
+</script>
+</body>
 </html>
