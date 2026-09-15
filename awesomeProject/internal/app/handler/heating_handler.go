@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const currentUserID uint = 1 // авторизация будет в следующих лабораторных
+const currentUserID uint = 1 
 
 type HeatingHandler struct {
 	repo repository.HeatingRepository

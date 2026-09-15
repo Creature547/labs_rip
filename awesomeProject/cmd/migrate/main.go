@@ -18,7 +18,6 @@ func main() {
 		log.Fatalf("failed to connect database: %v", err)
 	}
 
-	// Порядок важен из-за внешних ключей. Каскадное удаление нигде не используется.
 	if err := db.AutoMigrate(
 		&model.User{},
 		&model.HeatingCalculation{},

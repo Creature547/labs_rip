@@ -24,7 +24,7 @@ type HeatingCalculation struct {
 	ImageURL    string     `gorm:"type:varchar(500);not null"`
 	VideoURL    string     `gorm:"type:varchar(500);not null"`
 
-	// Параметры устройства и помещения из макета лабораторной.
+	
 	Power              float64 `gorm:"column:power_kw;not null;default:0"`
 	Cost               float64 `gorm:"column:cost_rub;not null;default:0"`
 	Area               float64 `gorm:"column:area_m2;not null;default:0"`
