@@ -178,31 +178,6 @@ body {
     text-overflow: ellipsis;
 }
 
-.more-btn {
-    border: none;
-    background: none;
-    color: #e0e0e0;
-    font-weight: bold;
-    cursor: pointer;
-    margin-left: 4px;
-    font-size: 12px;
-    /* Тень для кнопки "ещё" */
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-}
-
-.tiktok-description.expanded {
-    display: block;
-    height: auto;
-}
-
-.tiktok-description.expanded .description-text {
-    white-space: normal;
-}
-
-.tiktok-description.expanded .more-btn {
-    display: none;
-}
-
 /* 2. СТРАНИЦА: ДОБАВЛЕНИЕ (ЧЕРНОВИК) */
 .form-container {
     padding: 16px;
@@ -237,14 +212,6 @@ body {
     position: relative;
     background-size: cover;
     background-position: center;
-}
-
-.upload-box.image-box {
-    background-image: url('http://127.0.0.1:9000/heating/stove.jpg');
-}
-
-.upload-box.video-box {
-    background-image: url('http://127.0.0.1:9000/heating/fireplace.jpg');
 }
 
 .upload-label {
@@ -691,4 +658,80 @@ body {
     padding: 6px 12px;
     min-width: 48px;
     justify-content: center;
+}
+
+/* KANEV FIX: предметные шаблоны HeatingEquipment, локальная заглушка и "ещё" без JS. */
+.feed-video {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.description-details {
+    width: 100%;
+    color: #fff;
+    font-size: 11px;
+    line-height: 15px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.description-details summary {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.description-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.description-preview {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.more-text {
+    flex-shrink: 0;
+    margin-left: 5px;
+    color: #e0e0e0;
+    font-weight: 800;
+}
+
+.description-details[open] summary {
+    display: none;
+}
+
+.description-full {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.media-upload-block {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.media-preview {
+    height: 105px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    justify-content: flex-start;
+}
+
+.media-preview .upload-label {
+    background: rgba(0, 0, 0, 0.55);
+    padding: 4px 7px;
+    border-radius: 6px;
+}
+
+.calculation-form input[readonly],
+.calculation-form textarea[readonly] {
+    opacity: 0.88;
+    cursor: default;
 }

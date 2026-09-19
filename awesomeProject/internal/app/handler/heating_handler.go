@@ -10,24 +10,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const currentUserID uint = 1 
+const currentUserID uint = 1
+const defaultEquipmentImage = "/static/img/heating-placeholder.png"
 
-type HeatingHandler struct {
-	repo repository.HeatingRepository
+type HeatingEquipmentHandler struct {
+	repo repository.HeatingEquipmentRepository
 }
 
-func NewHeatingHandler(repo repository.HeatingRepository) *HeatingHandler {
-	return &HeatingHandler{repo: repo}
+func NewHeatingEquipmentHandler(repo repository.HeatingEquipmentRepository) *HeatingEquipmentHandler {
+	return &HeatingEquipmentHandler{repo: repo}
 }
 
-func (h *HeatingHandler) FeedHandler(c *gin.Context) {
+func (h *HeatingEquipmentHandler) FeedHandler(c *gin.Context) {
 	idStr := c.Query("id")
 	next := c.Query("next") == "true"
 
-	var calc *model.HeatingCalculation
+	var equipment *model.HeatingEquipment
 	var err error
 	if idStr == "" {
-		calc, err = h.repo.GetFirstPublished()
+		equipment, err = h.repo.GetFirstPublished()
 	} else {
 		id64, parseErr := strconv.ParseUint(idStr, 10, 64)
 		if parseErr != nil {
@@ -35,37 +36,39 @@ func (h *HeatingHandler) FeedHandler(c *gin.Context) {
 			return
 		}
 		if next {
-			calc, err = h.repo.GetNextPublished(uint(id64))
+			equipment, err = h.repo.GetNextPublished(uint(id64))
 		} else {
-			calc, err = h.repo.GetByID(uint(id64))
+			equipment, err = h.repo.GetByID(uint(id64))
 		}
 	}
 	if err != nil {
-		c.String(http.StatusNotFound, "Опубликованный расчет не найден")
+		c.String(http.StatusNotFound, "Опубликованное отопительное оборудование не найдено")
 		return
 	}
 
-	c.HTML(http.StatusOK, "feed.html", gin.H{
-		"calculation": calc,
-		"likes_count": calc.LikesCount(),
-		"active_page": "feed",
+	c.HTML(http.StatusOK, "heating_equipment_feed.html", gin.H{
+		"equipment":     equipment,
+		"likes_count":   equipment.LikesCount(),
+		"default_image": defaultEquipmentImage,
+		"active_page":   "feed",
 	})
 }
 
-func (h *HeatingHandler) DraftHandler(c *gin.Context) {
+func (h *HeatingEquipmentHandler) DraftHandler(c *gin.Context) {
 	draft, err := h.repo.GetDraft(currentUserID)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.HTML(http.StatusOK, "draft.html", gin.H{
-		"draft":       draft,
-		"has_draft":   draft != nil,
-		"active_page": "draft",
+	c.HTML(http.StatusOK, "heating_equipment_add.html", gin.H{
+		"draft":         draft,
+		"has_draft":     draft != nil,
+		"default_image": defaultEquipmentImage,
+		"active_page":   "draft",
 	})
 }
 
-func (h *HeatingHandler) GridHandler(c *gin.Context) {
+func (h *HeatingEquipmentHandler) GridHandler(c *gin.Context) {
 	minPowerStr := c.Query("min_power")
 	var minPower float64
 	if minPowerStr != "" {
@@ -82,53 +85,41 @@ func (h *HeatingHandler) GridHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.HTML(http.StatusOK, "grid.html", gin.H{
-		"items":       items,
-		"min_power":   minPowerStr,
-		"active_page": "grid",
+	c.HTML(http.StatusOK, "heating_equipment_grid.html", gin.H{
+		"items":         items,
+		"min_power":     minPowerStr,
+		"default_image": defaultEquipmentImage,
+		"active_page":   "grid",
 	})
 }
 
-func (h *HeatingHandler) CreateDraftHandler(c *gin.Context) {
+func (h *HeatingEquipmentHandler) CreateDraftHandler(c *gin.Context) {
 	parsePositive := func(name string) (float64, bool) {
 		value, err := strconv.ParseFloat(strings.TrimSpace(c.PostForm(name)), 64)
 		return value, err == nil && value > 0
 	}
 
-	title := strings.TrimSpace(c.PostForm("title"))
+	name := strings.TrimSpace(c.PostForm("name"))
 	imageURL := strings.TrimSpace(c.PostForm("image_url"))
 	videoURL := strings.TrimSpace(c.PostForm("video_url"))
-	description := strings.TrimSpace(c.PostForm("description"))
-	floorType := strings.TrimSpace(c.PostForm("floor_type"))
-	wallMaterial := strings.TrimSpace(c.PostForm("wall_material"))
-
 	power, okPower := parsePositive("power")
 	cost, okCost := parsePositive("cost")
-	area, okArea := parsePositive("area")
-	ceilingHeight, okCeiling := parsePositive("ceiling_height")
-	desiredTemperature, okTemperature := parsePositive("desired_temperature")
-	electricityTariff, okTariff := parsePositive("electricity_tariff")
 
-	if title == "" || imageURL == "" || videoURL == "" || description == "" ||
-		!okPower || !okCost || !okArea || !okCeiling || !okTemperature || !okTariff ||
-		floorType == "" || wallMaterial == "" {
-		c.String(http.StatusBadRequest, "Заполните все поля расчета корректными значениями")
+	if imageURL == "" {
+		imageURL = defaultEquipmentImage
+	}
+
+	if name == "" || videoURL == "" || !okPower || !okCost {
+		c.String(http.StatusBadRequest, "Заполните название, видео, мощность и стоимость корректными значениями")
 		return
 	}
 
 	data := repository.DraftData{
-		Title:              title,
-		ImageURL:           imageURL,
-		VideoURL:           videoURL,
-		Description:        description,
-		Power:              power,
-		Cost:               cost,
-		Area:               area,
-		CeilingHeight:      ceilingHeight,
-		FloorType:          floorType,
-		WallMaterial:       wallMaterial,
-		DesiredTemperature: desiredTemperature,
-		ElectricityTariff:  electricityTariff,
+		Name:     name,
+		ImageURL: imageURL,
+		VideoURL: videoURL,
+		Power:    power,
+		Cost:     cost,
 	}
 
 	if _, err := h.repo.CreateDraft(currentUserID, data); err != nil {
@@ -138,45 +129,20 @@ func (h *HeatingHandler) CreateDraftHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/draft")
 }
 
-func (h *HeatingHandler) PublishDraftHandler(c *gin.Context) {
+func (h *HeatingEquipmentHandler) PublishDraftHandler(c *gin.Context) {
 	id64, err := strconv.ParseUint(c.PostForm("id"), 10, 64)
 	if err != nil {
 		c.String(http.StatusBadRequest, "Некорректный id черновика")
 		return
 	}
 
-	parsePositive := func(name string) (float64, bool) {
-		v, parseErr := strconv.ParseFloat(strings.TrimSpace(c.PostForm(name)), 64)
-		return v, parseErr == nil && v > 0
-	}
-
 	description := strings.TrimSpace(c.PostForm("description"))
-	power, okPower := parsePositive("power")
-	cost, okCost := parsePositive("cost")
-	area, okArea := parsePositive("area")
-	ceilingHeight, okCeiling := parsePositive("ceiling_height")
-	desiredTemperature, okTemperature := parsePositive("desired_temperature")
-	electricityTariff, okTariff := parsePositive("electricity_tariff")
-	floorType := strings.TrimSpace(c.PostForm("floor_type"))
-	wallMaterial := strings.TrimSpace(c.PostForm("wall_material"))
-
-	if description == "" || !okPower || !okCost || !okArea || !okCeiling || !okTemperature || !okTariff || floorType == "" || wallMaterial == "" {
-		c.String(http.StatusBadRequest, "Заполните все параметры расчета корректными значениями")
+	if description == "" {
+		c.String(http.StatusBadRequest, "Заполните краткое описание оборудования")
 		return
 	}
 
-	data := repository.PublishDraftData{
-		Description:        description,
-		Power:              power,
-		Cost:               cost,
-		Area:               area,
-		CeilingHeight:      ceilingHeight,
-		FloorType:          floorType,
-		WallMaterial:       wallMaterial,
-		DesiredTemperature: desiredTemperature,
-		ElectricityTariff:  electricityTariff,
-	}
-
+	data := repository.PublishDraftData{Description: description}
 	if err := h.repo.PublishDraft(currentUserID, uint(id64), data); err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -184,13 +150,13 @@ func (h *HeatingHandler) PublishDraftHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/grid")
 }
 
-func (h *HeatingHandler) DeleteCalculationHandler(c *gin.Context) {
+func (h *HeatingEquipmentHandler) DeleteEquipmentHandler(c *gin.Context) {
 	id64, err := strconv.ParseUint(c.PostForm("id"), 10, 64)
 	if err != nil {
 		c.String(http.StatusBadRequest, "Некорректный id")
 		return
 	}
-	if err := h.repo.DeleteCalculationSQL(uint(id64)); err != nil {
+	if err := h.repo.DeleteEquipmentSQL(uint(id64)); err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}

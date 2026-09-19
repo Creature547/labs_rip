@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Добавление отопительного оборудования</title>
+    <link rel="stylesheet" href="/static/styles/heating_style.css?v=20">
+</head>
+<body>
+<div class="app-viewport">
+    <div class="app-content">
+        <div class="form-container">
+            {{ if .has_draft }}
+            <div class="form-header">Отопительное оборудование — черновик</div>
+
+            <form action="/draft/publish" method="POST" class="calculation-form">
+                <input type="hidden" name="id" value="{{ .draft.ID }}">
+
+                <div class="form-section-title">МЕДИА</div>
+                <div class="media-upload-block">
+                    <div class="upload-box media-preview"
+                         style="background-image: url('{{ .draft.ImageURL }}'), url('{{ .default_image }}');">
+                        <span class="upload-label">Фото услуги</span>
+                    </div>
+                    <div class="upload-box media-preview video-poster"
+                         style="background-image: url('{{ .default_image }}');">
+                        <span class="upload-label">Видео услуги</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Ссылка на изображение</label>
+                    <input type="url" value="{{ .draft.ImageURL }}" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Ссылка на видео</label>
+                    <input type="url" value="{{ .draft.VideoURL }}" readonly>
+                </div>
+
+                <div class="form-section-title">ОБОРУДОВАНИЕ</div>
+                <div class="form-group">
+                    <label>Название</label>
+                    <input type="text" value="{{ .draft.Name }}" readonly>
+                </div>
+                <div class="two-col-inputs">
+                    <div class="form-group">
+                        <label>Мощность, кВт</label>
+                        <input type="number" value="{{ .draft.Power }}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Стоимость, ₽</label>
+                        <input type="number" value="{{ .draft.Cost }}" readonly>
+                    </div>
+                </div>
+
+                <div class="form-section-title">КРАТКАЯ ИНФОРМАЦИЯ</div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea name="description" rows="4"
+                              placeholder="Кратко опишите отопительное оборудование" required></textarea>
+                </div>
+
+                <button type="submit" class="primary-form-btn">Опубликовать</button>
+            </form>
+
+            {{ else }}
+            <div class="form-header">Добавить отопительное оборудование</div>
+
+            <form action="/draft/create" method="POST" class="calculation-form">
+                <div class="form-section-title">МЕДИА</div>
+
+                <div class="media-upload-block">
+                    <div class="upload-box media-preview"
+                         style="background-image: url('{{ .default_image }}');">
+                        <span class="upload-label">Фото услуги</span>
+                    </div>
+                    <div class="upload-box media-preview"
+                         style="background-image: url('{{ .default_image }}');">
+                        <span class="upload-label">Видео услуги</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Ссылка на изображение</label>
+                    <input name="image_url" type="url"
+                           placeholder="Вставьте ссылку на изображение">
+                </div>
+
+                <div class="form-group">
+                    <label>Ссылка на видео</label>
+                    <input name="video_url" type="url"
+                           placeholder="Вставьте ссылку на видео" required>
+                </div>
+
+                <div class="form-section-title">ОБОРУДОВАНИЕ</div>
+
+                <div class="form-group">
+                    <label>Название</label>
+                    <input name="name" type="text"
+                           placeholder="Например, электрическая печь" required>
+                </div>
+
+                <div class="two-col-inputs">
+                    <div class="form-group">
+                        <label>Мощность, кВт</label>
+                        <input name="power" type="number" step="0.1" min="0.1"
+                               placeholder="3" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Стоимость, ₽</label>
+                        <input name="cost" type="number" step="0.01" min="0.01"
+                               placeholder="35000" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="primary-form-btn">Далее</button>
+            </form>
+            {{ end }}
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="/feed" class="nav-item">Лента</a>
+        <a href="/draft" class="nav-item active">Добавление</a>
+        <a href="/grid" class="nav-item">Плитка</a>
+    </nav>
+</div>
+</body>
+</html>

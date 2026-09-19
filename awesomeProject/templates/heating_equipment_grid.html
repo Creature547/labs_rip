@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Плитка</title>
-    <link rel="stylesheet" href="/static/styles/heating_style.css?v=12">
+    <title>Отопительное оборудование</title>
+    <link rel="stylesheet" href="/static/styles/heating_style.css?v=20">
 </head>
 <body>
 <div class="app-viewport">
@@ -18,9 +18,10 @@
             <div class="card-grid">
                 {{ range .items }}
                 <div class="card-wrap">
-                    <a href="/feed?id={{ .ID }}" class="card-item" style="background-image: url('{{ .ImageURL }}');">
+                    <a href="/feed?id={{ .ID }}" class="card-item"
+                       style="background-image: url('{{ .ImageURL }}'), url('/static/img/heating-placeholder.png');">
                         <div class="card-overlay">
-                            <div class="card-item-title">{{ .Title }}</div>
+                            <div class="card-item-title">{{ .Name }}</div>
                             <div class="card-item-sub">{{ .Power }} кВт · {{ .Cost }} ₽</div>
                             <div class="card-item-likes">❤️ {{ len .Likes }}</div>
                         </div>

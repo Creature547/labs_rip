@@ -11,48 +11,33 @@ import (
 )
 
 type DraftData struct {
-	Title              string
-	ImageURL           string
-	VideoURL           string
-	Description        string
-	Power              float64
-	Cost               float64
-	Area               float64
-	CeilingHeight      float64
-	FloorType          string
-	WallMaterial       string
-	DesiredTemperature float64
-	ElectricityTariff  float64
+	Name     string
+	ImageURL string
+	VideoURL string
+	Power    float64
+	Cost     float64
 }
 
 type PublishDraftData struct {
-	Description        string
-	Power              float64
-	Cost               float64
-	Area               float64
-	CeilingHeight      float64
-	FloorType          string
-	WallMaterial       string
-	DesiredTemperature float64
-	ElectricityTariff  float64
+	Description string
 }
 
-type HeatingRepository interface {
-	GetByID(id uint) (*model.HeatingCalculation, error)
-	GetNextPublished(currentID uint) (*model.HeatingCalculation, error)
-	GetFirstPublished() (*model.HeatingCalculation, error)
-	GetDraft(creatorID uint) (*model.HeatingCalculation, error)
-	GetAllPublished(minPower float64) ([]model.HeatingCalculation, error)
-	CreateDraft(creatorID uint, data DraftData) (*model.HeatingCalculation, error)
-	PublishDraft(creatorID, calculationID uint, data PublishDraftData) error
-	DeleteCalculationSQL(calculationID uint) error
+type HeatingEquipmentRepository interface {
+	GetByID(id uint) (*model.HeatingEquipment, error)
+	GetNextPublished(currentID uint) (*model.HeatingEquipment, error)
+	GetFirstPublished() (*model.HeatingEquipment, error)
+	GetDraft(creatorID uint) (*model.HeatingEquipment, error)
+	GetAllPublished(minPower float64) ([]model.HeatingEquipment, error)
+	CreateDraft(creatorID uint, data DraftData) (*model.HeatingEquipment, error)
+	PublishDraft(creatorID, equipmentID uint, data PublishDraftData) error
+	DeleteEquipmentSQL(equipmentID uint) error
 }
 
-type postgresHeatingRepository struct {
+type postgresHeatingEquipmentRepository struct {
 	db *gorm.DB
 }
 
-func NewPostgresHeatingRepository(dsn string) (HeatingRepository, error) {
+func NewPostgresHeatingEquipmentRepository(dsn string) (HeatingEquipmentRepository, error) {
 	if dsn == "" {
 		return nil, errors.New("пустая строка подключения к PostgreSQL: проверьте .env")
 	}
@@ -62,11 +47,11 @@ func NewPostgresHeatingRepository(dsn string) (HeatingRepository, error) {
 		return nil, err
 	}
 
-	return &postgresHeatingRepository{db: db}, nil
+	return &postgresHeatingEquipmentRepository{db: db}, nil
 }
 
-func (r *postgresHeatingRepository) GetByID(id uint) (*model.HeatingCalculation, error) {
-	var item model.HeatingCalculation
+func (r *postgresHeatingEquipmentRepository) GetByID(id uint) (*model.HeatingEquipment, error) {
+	var item model.HeatingEquipment
 	err := r.db.Preload("Likes").
 		Where("id = ? AND status = ?", id, model.StatusPublished).
 		First(&item).Error
@@ -76,8 +61,8 @@ func (r *postgresHeatingRepository) GetByID(id uint) (*model.HeatingCalculation,
 	return &item, nil
 }
 
-func (r *postgresHeatingRepository) GetFirstPublished() (*model.HeatingCalculation, error) {
-	var item model.HeatingCalculation
+func (r *postgresHeatingEquipmentRepository) GetFirstPublished() (*model.HeatingEquipment, error) {
+	var item model.HeatingEquipment
 	err := r.db.Preload("Likes").
 		Where("status = ?", model.StatusPublished).
 		Order("id ASC").First(&item).Error
@@ -87,8 +72,8 @@ func (r *postgresHeatingRepository) GetFirstPublished() (*model.HeatingCalculati
 	return &item, nil
 }
 
-func (r *postgresHeatingRepository) GetNextPublished(currentID uint) (*model.HeatingCalculation, error) {
-	var item model.HeatingCalculation
+func (r *postgresHeatingEquipmentRepository) GetNextPublished(currentID uint) (*model.HeatingEquipment, error) {
+	var item model.HeatingEquipment
 	err := r.db.Preload("Likes").
 		Where("status = ? AND id > ?", model.StatusPublished, currentID).
 		Order("id ASC").First(&item).Error
@@ -101,8 +86,8 @@ func (r *postgresHeatingRepository) GetNextPublished(currentID uint) (*model.Hea
 	return r.GetFirstPublished()
 }
 
-func (r *postgresHeatingRepository) GetDraft(creatorID uint) (*model.HeatingCalculation, error) {
-	var item model.HeatingCalculation
+func (r *postgresHeatingEquipmentRepository) GetDraft(creatorID uint) (*model.HeatingEquipment, error) {
+	var item model.HeatingEquipment
 	err := r.db.Where("creator_id = ? AND status = ?", creatorID, model.StatusDraft).
 		Order("id DESC").First(&item).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -114,8 +99,8 @@ func (r *postgresHeatingRepository) GetDraft(creatorID uint) (*model.HeatingCalc
 	return &item, nil
 }
 
-func (r *postgresHeatingRepository) GetAllPublished(minPower float64) ([]model.HeatingCalculation, error) {
-	var items []model.HeatingCalculation
+func (r *postgresHeatingEquipmentRepository) GetAllPublished(minPower float64) ([]model.HeatingEquipment, error) {
+	var items []model.HeatingEquipment
 	q := r.db.Preload("Likes").Where("status = ?", model.StatusPublished)
 	if minPower > 0 {
 		q = q.Where("power_kw >= ?", minPower)
@@ -126,7 +111,7 @@ func (r *postgresHeatingRepository) GetAllPublished(minPower float64) ([]model.H
 	return items, nil
 }
 
-func (r *postgresHeatingRepository) CreateDraft(creatorID uint, data DraftData) (*model.HeatingCalculation, error) {
+func (r *postgresHeatingEquipmentRepository) CreateDraft(creatorID uint, data DraftData) (*model.HeatingEquipment, error) {
 	existing, err := r.GetDraft(creatorID)
 	if err != nil {
 		return nil, err
@@ -135,22 +120,15 @@ func (r *postgresHeatingRepository) CreateDraft(creatorID uint, data DraftData) 
 		return existing, nil
 	}
 
-	item := model.HeatingCalculation{
-		Title:              data.Title,
-		ImageURL:           data.ImageURL,
-		VideoURL:           data.VideoURL,
-		Description:        data.Description,
-		Power:              data.Power,
-		Cost:               data.Cost,
-		Area:               data.Area,
-		CeilingHeight:      data.CeilingHeight,
-		FloorType:          data.FloorType,
-		WallMaterial:       data.WallMaterial,
-		DesiredTemperature: data.DesiredTemperature,
-		ElectricityTariff:  data.ElectricityTariff,
-		Status:             model.StatusDraft,
-		CreatedAt:          time.Now(),
-		CreatorID:          creatorID,
+	item := model.HeatingEquipment{
+		Name:      data.Name,
+		ImageURL:  data.ImageURL,
+		VideoURL:  data.VideoURL,
+		Power:     &data.Power,
+		Cost:      &data.Cost,
+		Status:    model.StatusDraft,
+		CreatedAt: time.Now(),
+		CreatorID: creatorID,
 	}
 
 	if err := r.db.Create(&item).Error; err != nil {
@@ -159,42 +137,48 @@ func (r *postgresHeatingRepository) CreateDraft(creatorID uint, data DraftData) 
 	return &item, nil
 }
 
-func (r *postgresHeatingRepository) PublishDraft(creatorID, calculationID uint, data PublishDraftData) error {
+func (r *postgresHeatingEquipmentRepository) PublishDraft(
+	creatorID uint,
+	equipmentID uint,
+	data PublishDraftData,
+) error {
+
 	formedAt := time.Now()
-	result := r.db.Model(&model.HeatingCalculation{}).
-		Where("id = ? AND creator_id = ? AND status = ?", calculationID, creatorID, model.StatusDraft).
+
+	result := r.db.Model(&model.HeatingEquipment{}).
+		Where(
+			"id = ? AND creator_id = ? AND status = ?",
+			equipmentID,
+			creatorID,
+			model.StatusDraft,
+		).
 		Updates(map[string]any{
-			"description":                data.Description,
-			"power_kw":                   data.Power,
-			"cost_rub":                   data.Cost,
-			"area_m2":                    data.Area,
-			"ceiling_height_m":           data.CeilingHeight,
-			"floor_type":                 data.FloorType,
-			"wall_material":              data.WallMaterial,
-			"desired_temperature_c":      data.DesiredTemperature,
-			"electricity_tariff_rub_kwh": data.ElectricityTariff,
-			"status":                     model.StatusPublished,
-			"formed_at":                  formedAt,
+			"short_description": data.Description,
+			"status":            model.StatusPublished,
+			"formed_at":         formedAt,
 		})
+
 	if result.Error != nil {
 		return result.Error
 	}
+
 	if result.RowsAffected == 0 {
-		return errors.New("черновик для публикации не найден")
+		return fmt.Errorf("черновик не найден")
 	}
+
 	return nil
 }
 
-
-func (r *postgresHeatingRepository) DeleteCalculationSQL(calculationID uint) error {
+// DeleteEquipmentSQL — логическое удаление чистым SQL, без ORM.
+func (r *postgresHeatingEquipmentRepository) DeleteEquipmentSQL(equipmentID uint) error {
 	sqlDB, err := r.db.DB()
 	if err != nil {
 		return err
 	}
 
 	result, err := sqlDB.Exec(
-		"UPDATE heating_calculations SET status = $1 WHERE id = $2 AND status <> $1",
-		model.StatusDeleted, calculationID,
+		"UPDATE heating_equipment SET status = $1 WHERE id = $2 AND status <> $1",
+		model.StatusDeleted, equipmentID,
 	)
 	if err != nil {
 		return err
@@ -204,7 +188,7 @@ func (r *postgresHeatingRepository) DeleteCalculationSQL(calculationID uint) err
 		return err
 	}
 	if rows == 0 {
-		return fmt.Errorf("расчет отопления с id %d не найден или уже удален", calculationID)
+		return fmt.Errorf("отопительное оборудование с id %d не найдено или уже удалено", equipmentID)
 	}
 	return nil
 }

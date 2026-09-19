@@ -16,43 +16,54 @@ type User struct {
 	Password string `gorm:"type:varchar(100);not null"`
 }
 
-type HeatingCalculation struct {
-	ID          uint       `gorm:"primaryKey"`
-	Title       string     `gorm:"type:varchar(120);not null"`
-	Description string     `gorm:"type:varchar(500)"`
-	Status      StatusType `gorm:"type:varchar(20);not null;index"`
-	ImageURL    string     `gorm:"type:varchar(500);not null"`
-	VideoURL    string     `gorm:"type:varchar(500);not null"`
+// HeatingEquipment — услуга по предметной области:
+// отопительное оборудование.
+type HeatingEquipment struct {
+	ID uint `gorm:"primaryKey"`
 
-	
-	Power              float64 `gorm:"column:power_kw;not null;default:0"`
-	Cost               float64 `gorm:"column:cost_rub;not null;default:0"`
-	Area               float64 `gorm:"column:area_m2;not null;default:0"`
-	CeilingHeight      float64 `gorm:"column:ceiling_height_m;not null;default:2.7"`
-	FloorType          string  `gorm:"column:floor_type;type:varchar(30);not null;default:'1 этаж'"`
-	WallMaterial       string  `gorm:"column:wall_material;type:varchar(80);not null;default:'Газобетонный блок'"`
-	DesiredTemperature float64 `gorm:"column:desired_temperature_c;not null;default:22"`
-	ElectricityTariff  float64 `gorm:"column:electricity_tariff_rub_kwh;not null;default:5.5"`
+	Name string `gorm:"column:equipment_name;type:varchar(120);not null"`
 
-	CreatedAt time.Time `gorm:"not null"`
-	FormedAt  *time.Time
-	CreatorID uint `gorm:"not null;index"`
+	Description *string `gorm:"column:short_description;type:varchar(500)"`
 
-	Creator User          `gorm:"foreignKey:CreatorID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-	Likes   []HeatingLike `gorm:"foreignKey:HeatingCalculationID"`
+	Status StatusType `gorm:"column:status;type:varchar(20);not null;index"`
+
+	ImageURL string `gorm:"column:image_url;type:varchar(500);not null"`
+	VideoURL string `gorm:"column:video_url;type:varchar(500);not null"`
+
+	// Два поля по предметной области
+	Power *float64 `gorm:"column:power_kw"`
+	Cost  *float64 `gorm:"column:cost_rub"`
+
+	CreatedAt time.Time  `gorm:"column:created_at;not null"`
+	FormedAt  *time.Time `gorm:"column:formed_at"`
+
+	CreatorID uint `gorm:"column:creator_id;not null;index"`
+
+	Creator User `gorm:"foreignKey:CreatorID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+
+	Likes []HeatingEquipmentLike `gorm:"foreignKey:HeatingEquipmentID"`
 }
 
-func (HeatingCalculation) TableName() string { return "heating_calculations" }
-
-func (h HeatingCalculation) LikesCount() int { return len(h.Likes) }
-
-type HeatingLike struct {
-	ID                   uint `gorm:"primaryKey"`
-	UserID               uint `gorm:"not null;uniqueIndex:idx_user_heating"`
-	HeatingCalculationID uint `gorm:"not null;uniqueIndex:idx_user_heating"`
-
-	User               User               `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-	HeatingCalculation HeatingCalculation `gorm:"foreignKey:HeatingCalculationID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+func (HeatingEquipment) TableName() string {
+	return "heating_equipment"
 }
 
-func (HeatingLike) TableName() string { return "heating_likes" }
+func (h HeatingEquipment) LikesCount() int {
+	return len(h.Likes)
+}
+
+type HeatingEquipmentLike struct {
+	ID uint `gorm:"primaryKey"`
+
+	UserID uint `gorm:"column:user_id;not null;uniqueIndex:idx_user_heating_equipment"`
+
+	HeatingEquipmentID uint `gorm:"column:heating_equipment_id;not null;uniqueIndex:idx_user_heating_equipment"`
+
+	User User `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+
+	HeatingEquipment HeatingEquipment `gorm:"foreignKey:HeatingEquipmentID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+}
+
+func (HeatingEquipmentLike) TableName() string {
+	return "heating_equipment_likes"
+}
