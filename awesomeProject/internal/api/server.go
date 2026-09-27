@@ -5,7 +5,8 @@ import (
 	"awesomeProject/internal/app/handler"
 	"awesomeProject/internal/app/repository"
 	"log"
-	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -14,36 +15,47 @@ import (
 func StartServer() {
 	_ = godotenv.Load()
 
-	repo, err := repository.NewPostgresHeatingEquipmentRepository(dsn.FromEnv())
+	repo, err := repository.New(repository.Settings{
+		PostgresDSN:    dsn.FromEnv(),
+		MinioEndpoint:  os.Getenv("MINIO_ENDPOINT"),
+		MinioAccessKey: os.Getenv("MINIO_ACCESS_KEY"),
+		MinioSecretKey: os.Getenv("MINIO_SECRET_KEY"),
+		MinioBucket:    os.Getenv("MINIO_BUCKET_NAME"),
+		MinioUseSSL:    strings.EqualFold(os.Getenv("MINIO_USE_SSL"), "true"),
+	})
 	if err != nil {
-		log.Fatalf("ошибка подключения к PostgreSQL: %v", err)
+		log.Fatalf("repository initialization failed: %v", err)
 	}
 
-	r := gin.Default()
-	r.Static("/static", "./resources")
-	r.LoadHTMLGlob("templates/*")
-
-	h := handler.NewHeatingEquipmentHandler(repo)
-
-	// Ровно 3 GET.
-	r.GET("/feed", h.FeedHandler)
-	r.GET("/draft", h.DraftHandler)
-	r.GET("/grid", h.GridHandler)
-
-	// Ровно 3 POST.
-	r.POST("/draft/create", h.CreateDraftHandler)
-	r.POST("/draft/publish", h.PublishDraftHandler)
-	r.POST("/heating/delete", h.DeleteEquipmentHandler)
-
-	r.NoRoute(func(c *gin.Context) {
-		if c.Request.URL.Path == "/" {
-			c.Redirect(http.StatusFound, "/feed")
-			return
-		}
-		c.Status(http.StatusNotFound)
-	})
-
+	r := NewRouter(repo, repo, os.Getenv("MINIO_PUBLIC_URL"))
 	if err := r.Run("0.0.0.0:8080"); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func NewRouter(equipmentRepo repository.HeatingEquipmentRepository, userRepo repository.UserRepository, mediaBaseURL string) *gin.Engine {
+	r := gin.Default()
+	r.MaxMultipartMemory = 64 << 20
+
+	equipment := handler.NewHeatingEquipmentHandler(equipmentRepo, mediaBaseURL)
+	users := handler.NewUserHandler(userRepo)
+
+	api := r.Group("/api")
+	{
+		api.GET("/heating-equipment", equipment.List)
+		api.POST("/heating-equipment", equipment.CreateDraft)
+		api.GET("/heating-equipment/draft", equipment.Draft)
+		api.PUT("/heating-equipment/:id/publish", equipment.Publish)
+		api.DELETE("/heating-equipment/:id", equipment.Delete)
+		api.POST("/heating-equipment/:id/like", equipment.Like)
+
+		api.GET("/heating-equipment/feed", equipment.Feed)
+		api.GET("/heating-equipment/feed/:id", equipment.FeedByID)
+
+		api.POST("/users", users.Register)
+		api.POST("/users/auth", users.Authenticate)
+		api.POST("/users/logout", users.Logout)
+	}
+
+	return r
 }

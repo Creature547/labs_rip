@@ -11,59 +11,63 @@ const (
 )
 
 type User struct {
-	ID       uint   `gorm:"primaryKey"`
-	Login    string `gorm:"type:varchar(50);uniqueIndex;not null"`
-	Password string `gorm:"type:varchar(100);not null"`
+	ID           uint      `gorm:"primaryKey" json:"-"`
+	Login        string    `gorm:"type:varchar(50);uniqueIndex;not null" json:"-"`
+	PasswordHash string    `gorm:"column:password_hash;type:varchar(100);not null" json:"-"`
+	CreatedAt    time.Time `gorm:"column:created_at;not null" json:"-"`
 }
 
-// HeatingEquipment — услуга по предметной области:
-// отопительное оборудование.
+func (User) TableName() string { return "users" }
+
 type HeatingEquipment struct {
-	ID uint `gorm:"primaryKey"`
+	ID uint `gorm:"primaryKey" json:"-"`
 
-	Name string `gorm:"column:equipment_name;type:varchar(120);not null"`
+	Name        string   `gorm:"column:equipment_name;type:varchar(120);not null" json:"-"`
+	Description *string  `gorm:"column:short_description;type:varchar(500)" json:"-"`
+	Power       *float64 `gorm:"column:power_kw" json:"-"`
+	Cost        *float64 `gorm:"column:cost_rub" json:"-"`
 
-	Description *string `gorm:"column:short_description;type:varchar(500)"`
+	ImageName string `gorm:"column:image_name;type:varchar(255);not null" json:"-"`
+	VideoName string `gorm:"column:video_name;type:varchar(255);not null" json:"-"`
 
-	Status StatusType `gorm:"column:status;type:varchar(20);not null;index"`
+	Status StatusType `gorm:"column:status;type:varchar(20);not null;index" json:"-"`
 
-	ImageURL string `gorm:"column:image_url;type:varchar(500);not null"`
-	VideoURL string `gorm:"column:video_url;type:varchar(500);not null"`
+	CreatorID   uint  `gorm:"column:creator_id;not null;index" json:"-"`
+	ModeratorID *uint `gorm:"column:moderator_id;index" json:"-"`
 
-	// Два поля по предметной области
-	Power *float64 `gorm:"column:power_kw"`
-	Cost  *float64 `gorm:"column:cost_rub"`
+	CreatedAt  time.Time  `gorm:"column:created_at;not null" json:"-"`
+	FormedAt   *time.Time `gorm:"column:formed_at" json:"-"`
+	FinishedAt *time.Time `gorm:"column:finished_at" json:"-"`
 
-	CreatedAt time.Time  `gorm:"column:created_at;not null"`
-	FormedAt  *time.Time `gorm:"column:formed_at"`
+	Creator   User  `gorm:"foreignKey:CreatorID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"-"`
+	Moderator *User `gorm:"foreignKey:ModeratorID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"-"`
 
-	CreatorID uint `gorm:"column:creator_id;not null;index"`
-
-	Creator User `gorm:"foreignKey:CreatorID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-
-	Likes []HeatingEquipmentLike `gorm:"foreignKey:HeatingEquipmentID"`
+	Likes []HeatingEquipmentLike `gorm:"foreignKey:HeatingEquipmentID" json:"-"`
 }
 
-func (HeatingEquipment) TableName() string {
-	return "heating_equipment"
-}
+func (HeatingEquipment) TableName() string { return "heating_equipment" }
 
-func (h HeatingEquipment) LikesCount() int {
-	return len(h.Likes)
+func (h HeatingEquipment) LikesCount() int { return len(h.Likes) }
+
+func (h HeatingEquipment) IsLikedBy(userID uint) bool {
+	for _, like := range h.Likes {
+		if like.UserID == userID {
+			return true
+		}
+	}
+	return false
 }
 
 type HeatingEquipmentLike struct {
-	ID uint `gorm:"primaryKey"`
+	ID uint `gorm:"primaryKey" json:"-"`
 
-	UserID uint `gorm:"column:user_id;not null;uniqueIndex:idx_user_heating_equipment"`
+	UserID             uint `gorm:"column:user_id;not null;uniqueIndex:idx_user_heating_equipment" json:"-"`
+	HeatingEquipmentID uint `gorm:"column:heating_equipment_id;not null;uniqueIndex:idx_user_heating_equipment" json:"-"`
 
-	HeatingEquipmentID uint `gorm:"column:heating_equipment_id;not null;uniqueIndex:idx_user_heating_equipment"`
+	CreatedAt time.Time `gorm:"column:created_at;not null" json:"-"`
 
-	User User `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-
-	HeatingEquipment HeatingEquipment `gorm:"foreignKey:HeatingEquipmentID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	User             User             `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"-"`
+	HeatingEquipment HeatingEquipment `gorm:"foreignKey:HeatingEquipmentID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"-"`
 }
 
-func (HeatingEquipmentLike) TableName() string {
-	return "heating_equipment_likes"
-}
+func (HeatingEquipmentLike) TableName() string { return "heating_equipment_likes" }

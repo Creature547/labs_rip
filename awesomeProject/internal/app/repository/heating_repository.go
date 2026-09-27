@@ -2,80 +2,232 @@ package repository
 
 import (
 	"awesomeProject/internal/app/model"
+	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"mime/multipart"
+	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-type DraftData struct {
-	Name     string
-	ImageURL string
-	VideoURL string
-	Power    float64
-	Cost     float64
+var (
+	ErrNotFound         = errors.New("not found")
+	ErrDraftExists      = errors.New("draft already exists")
+	ErrInvalidLikeValue = errors.New("like must be 0 or 1")
+	ErrLoginExists      = errors.New("login already exists")
+)
+
+type Settings struct {
+	PostgresDSN    string
+	MinioEndpoint  string
+	MinioAccessKey string
+	MinioSecretKey string
+	MinioBucket    string
+	MinioUseSSL    bool
 }
 
-type PublishDraftData struct {
+type EquipmentFilter struct {
+	Name     string
+	MinPower *float64
+	MaxCost  *float64
+}
+
+type DraftData struct {
+	Name        string
 	Description string
+	Power       float64
+	Cost        float64
 }
 
 type HeatingEquipmentRepository interface {
-	GetByID(id uint) (*model.HeatingEquipment, error)
-	GetNextPublished(currentID uint) (*model.HeatingEquipment, error)
-	GetFirstPublished() (*model.HeatingEquipment, error)
+	ListPublished(filter EquipmentFilter) ([]model.HeatingEquipment, error)
 	GetDraft(creatorID uint) (*model.HeatingEquipment, error)
-	GetAllPublished(minPower float64) ([]model.HeatingEquipment, error)
-	CreateDraft(creatorID uint, data DraftData) (*model.HeatingEquipment, error)
-	PublishDraft(creatorID, equipmentID uint, data PublishDraftData) error
-	DeleteEquipmentSQL(equipmentID uint) error
+	CreateDraft(creatorID uint, data DraftData, image, video *multipart.FileHeader) (*model.HeatingEquipment, error)
+	PublishDraft(creatorID, equipmentID uint) (*model.HeatingEquipment, error)
+	GetFirstPublished() (*model.HeatingEquipment, error)
+	GetPublishedByID(id uint) (*model.HeatingEquipment, error)
+	GetNextPublished(currentID uint) (*model.HeatingEquipment, error)
+	SetLike(userID, equipmentID uint, value int) (*model.HeatingEquipment, error)
+	SoftDelete(creatorID, equipmentID uint) error
+	MediaBucket() string
 }
 
-type postgresHeatingEquipmentRepository struct {
-	db *gorm.DB
+type UserRepository interface {
+	RegisterUser(login, passwordHash string) (*model.User, error)
 }
 
-func NewPostgresHeatingEquipmentRepository(dsn string) (HeatingEquipmentRepository, error) {
-	if dsn == "" {
-		return nil, errors.New("пустая строка подключения к PostgreSQL: проверьте .env")
+type PostgresRepository struct {
+	db     *gorm.DB
+	minio  *minio.Client
+	bucket string
+}
+
+func New(settings Settings) (*PostgresRepository, error) {
+	if strings.TrimSpace(settings.PostgresDSN) == "" {
+		return nil, errors.New("empty postgres dsn")
+	}
+	if settings.MinioEndpoint == "" || settings.MinioAccessKey == "" || settings.MinioSecretKey == "" || settings.MinioBucket == "" {
+		return nil, errors.New("incomplete minio settings")
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(settings.PostgresDSN), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}
 
-	return &postgresHeatingEquipmentRepository{db: db}, nil
+	minioClient, err := minio.New(settings.MinioEndpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(settings.MinioAccessKey, settings.MinioSecretKey, ""),
+		Secure: settings.MinioUseSSL,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	repo := &PostgresRepository{db: db, minio: minioClient, bucket: settings.MinioBucket}
+	if err := repo.ensureBucket(context.Background()); err != nil {
+		return nil, err
+	}
+	return repo, nil
 }
 
-func (r *postgresHeatingEquipmentRepository) GetByID(id uint) (*model.HeatingEquipment, error) {
+func (r *PostgresRepository) MediaBucket() string { return r.bucket }
+
+func (r *PostgresRepository) ensureBucket(ctx context.Context) error {
+	exists, err := r.minio.BucketExists(ctx, r.bucket)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := r.minio.MakeBucket(ctx, r.bucket, minio.MakeBucketOptions{}); err != nil {
+			return err
+		}
+	}
+
+	// Public read is useful for the SPA: DB stores only object names,
+	// while the serializer builds URLs for the client.
+	policy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::%s/*"]}]}`, r.bucket)
+	return r.minio.SetBucketPolicy(ctx, r.bucket, policy)
+}
+
+func (r *PostgresRepository) ListPublished(filter EquipmentFilter) ([]model.HeatingEquipment, error) {
+	items := make([]model.HeatingEquipment, 0)
+	q := r.db.Preload("Likes").Where("status = ?", model.StatusPublished)
+	if filter.Name != "" {
+		q = q.Where("LOWER(equipment_name) LIKE ?", "%"+strings.ToLower(filter.Name)+"%")
+	}
+	if filter.MinPower != nil {
+		q = q.Where("power_kw >= ?", *filter.MinPower)
+	}
+	if filter.MaxCost != nil {
+		q = q.Where("cost_rub <= ?", *filter.MaxCost)
+	}
+	if err := q.Order("id ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *PostgresRepository) GetDraft(creatorID uint) (*model.HeatingEquipment, error) {
 	var item model.HeatingEquipment
-	err := r.db.Preload("Likes").
-		Where("id = ? AND status = ?", id, model.StatusPublished).
-		First(&item).Error
+	err := r.db.Preload("Likes").Where("creator_id = ? AND status = ?", creatorID, model.StatusDraft).
+		Order("id DESC").First(&item).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
 	return &item, nil
 }
 
-func (r *postgresHeatingEquipmentRepository) GetFirstPublished() (*model.HeatingEquipment, error) {
-	var item model.HeatingEquipment
-	err := r.db.Preload("Likes").
-		Where("status = ?", model.StatusPublished).
-		Order("id ASC").First(&item).Error
+func (r *PostgresRepository) CreateDraft(creatorID uint, data DraftData, image, video *multipart.FileHeader) (*model.HeatingEquipment, error) {
+	var count int64
+	if err := r.db.Model(&model.HeatingEquipment{}).
+		Where("creator_id = ? AND status = ?", creatorID, model.StatusDraft).
+		Count(&count).Error; err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, ErrDraftExists
+	}
+
+	imageName, err := generatedObjectName("image", image.Filename)
 	if err != nil {
 		return nil, err
 	}
+	videoName, err := generatedObjectName("video", video.Filename)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := context.Background()
+	if err := r.putFile(ctx, imageName, image); err != nil {
+		return nil, err
+	}
+	if err := r.putFile(ctx, videoName, video); err != nil {
+		_ = r.minio.RemoveObject(ctx, r.bucket, imageName, minio.RemoveObjectOptions{})
+		return nil, err
+	}
+
+	description := data.Description
+	item := model.HeatingEquipment{
+		Name:        data.Name,
+		Description: &description,
+		Power:       &data.Power,
+		Cost:        &data.Cost,
+		ImageName:   imageName,
+		VideoName:   videoName,
+		Status:      model.StatusDraft,
+		CreatorID:   creatorID,
+		CreatedAt:   time.Now(),
+	}
+
+	if err := r.db.Create(&item).Error; err != nil {
+		_ = r.minio.RemoveObject(ctx, r.bucket, imageName, minio.RemoveObjectOptions{})
+		_ = r.minio.RemoveObject(ctx, r.bucket, videoName, minio.RemoveObjectOptions{})
+		return nil, err
+	}
+	item.Likes = []model.HeatingEquipmentLike{}
 	return &item, nil
 }
 
-func (r *postgresHeatingEquipmentRepository) GetNextPublished(currentID uint) (*model.HeatingEquipment, error) {
+func (r *PostgresRepository) PublishDraft(creatorID, equipmentID uint) (*model.HeatingEquipment, error) {
+	formedAt := time.Now()
+	result := r.db.Model(&model.HeatingEquipment{}).
+		Where("id = ? AND creator_id = ? AND status = ?", equipmentID, creatorID, model.StatusDraft).
+		Updates(map[string]any{"status": model.StatusPublished, "formed_at": formedAt})
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, ErrNotFound
+	}
+	return r.GetPublishedByID(equipmentID)
+}
+
+func (r *PostgresRepository) GetFirstPublished() (*model.HeatingEquipment, error) {
 	var item model.HeatingEquipment
-	err := r.db.Preload("Likes").
-		Where("status = ? AND id > ?", model.StatusPublished, currentID).
+	err := r.db.Preload("Likes").Where("status = ?", model.StatusPublished).Order("id ASC").First(&item).Error
+	return normalizeNotFound(&item, err)
+}
+
+func (r *PostgresRepository) GetPublishedByID(id uint) (*model.HeatingEquipment, error) {
+	var item model.HeatingEquipment
+	err := r.db.Preload("Likes").Where("id = ? AND status = ?", id, model.StatusPublished).First(&item).Error
+	return normalizeNotFound(&item, err)
+}
+
+func (r *PostgresRepository) GetNextPublished(currentID uint) (*model.HeatingEquipment, error) {
+	var item model.HeatingEquipment
+	err := r.db.Preload("Likes").Where("status = ? AND id > ?", model.StatusPublished, currentID).
 		Order("id ASC").First(&item).Error
 	if err == nil {
 		return &item, nil
@@ -86,109 +238,82 @@ func (r *postgresHeatingEquipmentRepository) GetNextPublished(currentID uint) (*
 	return r.GetFirstPublished()
 }
 
-func (r *postgresHeatingEquipmentRepository) GetDraft(creatorID uint) (*model.HeatingEquipment, error) {
-	var item model.HeatingEquipment
-	err := r.db.Where("creator_id = ? AND status = ?", creatorID, model.StatusDraft).
-		Order("id DESC").First(&item).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
+func (r *PostgresRepository) SetLike(userID, equipmentID uint, value int) (*model.HeatingEquipment, error) {
+	if value != 0 && value != 1 {
+		return nil, ErrInvalidLikeValue
 	}
-	if err != nil {
+	if _, err := r.GetPublishedByID(equipmentID); err != nil {
 		return nil, err
 	}
-	return &item, nil
+
+	if value == 1 {
+		like := model.HeatingEquipmentLike{UserID: userID, HeatingEquipmentID: equipmentID, CreatedAt: time.Now()}
+		if err := r.db.Where("user_id = ? AND heating_equipment_id = ?", userID, equipmentID).
+			FirstOrCreate(&like).Error; err != nil {
+			return nil, err
+		}
+	} else {
+		if err := r.db.Where("user_id = ? AND heating_equipment_id = ?", userID, equipmentID).
+			Delete(&model.HeatingEquipmentLike{}).Error; err != nil {
+			return nil, err
+		}
+	}
+	return r.GetPublishedByID(equipmentID)
 }
 
-func (r *postgresHeatingEquipmentRepository) GetAllPublished(minPower float64) ([]model.HeatingEquipment, error) {
-	var items []model.HeatingEquipment
-	q := r.db.Preload("Likes").Where("status = ?", model.StatusPublished)
-	if minPower > 0 {
-		q = q.Where("power_kw >= ?", minPower)
-	}
-	if err := q.Order("id ASC").Find(&items).Error; err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-func (r *postgresHeatingEquipmentRepository) CreateDraft(creatorID uint, data DraftData) (*model.HeatingEquipment, error) {
-	existing, err := r.GetDraft(creatorID)
-	if err != nil {
-		return nil, err
-	}
-	if existing != nil {
-		return existing, nil
-	}
-
-	item := model.HeatingEquipment{
-		Name:      data.Name,
-		ImageURL:  data.ImageURL,
-		VideoURL:  data.VideoURL,
-		Power:     &data.Power,
-		Cost:      &data.Cost,
-		Status:    model.StatusDraft,
-		CreatedAt: time.Now(),
-		CreatorID: creatorID,
-	}
-
-	if err := r.db.Create(&item).Error; err != nil {
-		return nil, err
-	}
-	return &item, nil
-}
-
-func (r *postgresHeatingEquipmentRepository) PublishDraft(
-	creatorID uint,
-	equipmentID uint,
-	data PublishDraftData,
-) error {
-
-	formedAt := time.Now()
-
+func (r *PostgresRepository) SoftDelete(creatorID, equipmentID uint) error {
+	now := time.Now()
 	result := r.db.Model(&model.HeatingEquipment{}).
-		Where(
-			"id = ? AND creator_id = ? AND status = ?",
-			equipmentID,
-			creatorID,
-			model.StatusDraft,
-		).
-		Updates(map[string]any{
-			"short_description": data.Description,
-			"status":            model.StatusPublished,
-			"formed_at":         formedAt,
-		})
-
+		Where("id = ? AND creator_id = ? AND status <> ?", equipmentID, creatorID, model.StatusDeleted).
+		Updates(map[string]any{"status": model.StatusDeleted, "finished_at": now})
 	if result.Error != nil {
 		return result.Error
 	}
-
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("черновик не найден")
+		return ErrNotFound
 	}
-
 	return nil
 }
 
-// DeleteEquipmentSQL — логическое удаление чистым SQL, без ORM.
-func (r *postgresHeatingEquipmentRepository) DeleteEquipmentSQL(equipmentID uint) error {
-	sqlDB, err := r.db.DB()
-	if err != nil {
-		return err
+func (r *PostgresRepository) RegisterUser(login, passwordHash string) (*model.User, error) {
+	user := model.User{Login: login, PasswordHash: passwordHash, CreatedAt: time.Now()}
+	if err := r.db.Create(&user).Error; err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(strings.ToLower(err.Error()), "unique") {
+			return nil, ErrLoginExists
+		}
+		return nil, err
 	}
+	return &user, nil
+}
 
-	result, err := sqlDB.Exec(
-		"UPDATE heating_equipment SET status = $1 WHERE id = $2 AND status <> $1",
-		model.StatusDeleted, equipmentID,
-	)
+func (r *PostgresRepository) putFile(ctx context.Context, objectName string, header *multipart.FileHeader) error {
+	file, err := header.Open()
 	if err != nil {
 		return err
 	}
-	rows, err := result.RowsAffected()
+	defer file.Close()
+	_, err = r.minio.PutObject(ctx, r.bucket, objectName, file, header.Size, minio.PutObjectOptions{ContentType: header.Header.Get("Content-Type")})
+	return err
+}
+
+func generatedObjectName(prefix, originalName string) (string, error) {
+	random := make([]byte, 12)
+	if _, err := rand.Read(random); err != nil {
+		return "", err
+	}
+	ext := strings.ToLower(filepath.Ext(originalName))
+	if len(ext) > 10 || strings.ContainsAny(ext, `/\\`) {
+		ext = ""
+	}
+	return prefix + "_" + hex.EncodeToString(random) + ext, nil
+}
+
+func normalizeNotFound(item *model.HeatingEquipment, err error) (*model.HeatingEquipment, error) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if rows == 0 {
-		return fmt.Errorf("отопительное оборудование с id %d не найдено или уже удалено", equipmentID)
-	}
-	return nil
+	return item, nil
 }
