@@ -227,14 +227,21 @@ func (r *PostgresRepository) GetPublishedByID(id uint) (*model.HeatingEquipment,
 
 func (r *PostgresRepository) GetNextPublished(currentID uint) (*model.HeatingEquipment, error) {
 	var item model.HeatingEquipment
-	err := r.db.Preload("Likes").Where("status = ? AND id > ?", model.StatusPublished, currentID).
-		Order("id ASC").First(&item).Error
+
+	err := r.db.
+		Preload("Likes").
+		Where("status = ? AND id > ?", model.StatusPublished, currentID).
+		Order("id ASC").
+		First(&item).Error
+
 	if err == nil {
 		return &item, nil
 	}
+
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
+
 	return r.GetFirstPublished()
 }
 

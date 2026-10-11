@@ -40,16 +40,6 @@ func main() {
 		renameColumnIfNeeded(db, "heating_equipment_likes", "heating_calculation_id", "heating_equipment_id")
 	}
 
-	// Compatibility: old lab-2 tables already contain rows,
-	// so new NOT NULL timestamps must be filled before AutoMigrate.
-	if db.Migrator().HasTable("users") {
-		ensureTimestampColumn(db, "users", "created_at")
-	}
-
-	if db.Migrator().HasTable("heating_equipment_likes") {
-		ensureTimestampColumn(db, "heating_equipment_likes", "created_at")
-	}
-
 	if err := db.AutoMigrate(&model.User{}, &model.HeatingEquipment{}, &model.HeatingEquipmentLike{}); err != nil {
 		log.Fatalf("cant migrate db: %v", err)
 	}
@@ -102,12 +92,4 @@ func mustExec(db *gorm.DB, sql string) {
 	if err := db.Exec(sql).Error; err != nil {
 		log.Fatalf("migration sql failed: %v", err)
 	}
-}
-func ensureTimestampColumn(db *gorm.DB, table, column string) {
-	if !db.Migrator().HasColumn(table, column) {
-		mustExec(db, `ALTER TABLE `+table+` ADD COLUMN `+column+` timestamptz`)
-	}
-
-	mustExec(db, `UPDATE `+table+` SET `+column+` = NOW() WHERE `+column+` IS NULL`)
-	mustExec(db, `ALTER TABLE `+table+` ALTER COLUMN `+column+` SET NOT NULL`)
 }

@@ -19,6 +19,8 @@ type User struct {
 
 func (User) TableName() string { return "users" }
 
+// HeatingEquipment is the service entity for the subject area.
+// System fields are intentionally excluded from JSON; the API uses serializers.
 type HeatingEquipment struct {
 	ID uint `gorm:"primaryKey" json:"-"`
 

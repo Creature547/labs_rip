@@ -129,15 +129,27 @@ func (h *HeatingEquipmentHandler) FeedByID(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
+
 	modelItem, err := h.repo.GetPublishedByID(id)
+
 	if c.Query("next") == "true" {
 		modelItem, err = h.repo.GetNextPublished(id)
 	}
+
 	if err != nil {
 		handleRepositoryError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, serializer.HeatingEquipmentFromModel(*modelItem, currentuser.Get().ID, h.mediaBaseURL, h.repo.MediaBucket()))
+
+	c.JSON(
+		http.StatusOK,
+		serializer.HeatingEquipmentFromModel(
+			*modelItem,
+			currentuser.Get().ID,
+			h.mediaBaseURL,
+			h.repo.MediaBucket(),
+		),
+	)
 }
 
 type likeRequest struct {

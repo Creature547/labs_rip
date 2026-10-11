@@ -1,7 +1,7 @@
 {
   "info": {
     "_postman_id": "4c961f21-b7f0-4b59-90a8-lab3heatingapi",
-    "name": "ЛР3 — Heating Equipment Web Service",
+    "name": "ЛР3 — 10 методов по требованиям Канева",
     "description": "10 запросов для показа лабораторной №3. Пользователь-создатель в ЛР3 зафиксирован singleton-функцией и имеет id=1.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -15,11 +15,6 @@
       "key": "equipmentId",
       "value": "1",
       "type": "string"
-    },
-    {
-      "key": "feedId",
-      "value": "1",
-      "type": "string"
     }
   ],
   "item": [
@@ -29,7 +24,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/heating-equipment?min_power=5",
+          "raw": "{{baseUrl}}/api/heating-equipment?min_power=100",
           "host": [
             "{{baseUrl}}"
           ],
@@ -40,7 +35,7 @@
           "query": [
             {
               "key": "min_power",
-              "value": "5"
+              "value": "100"
             }
           ]
         }
@@ -58,7 +53,65 @@
       ]
     },
     {
-      "name": "02 POST добавить услугу с image + video",
+      "name": "02 GET лента",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/heating-equipment/feed",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "heating-equipment",
+            "feed"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 GET черновик текущего пользователя",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/heating-equipment/draft",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "heating-equipment",
+            "draft"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 POST добавить услугу с image + video",
       "request": {
         "method": "POST",
         "header": [],
@@ -122,36 +175,7 @@
       ]
     },
     {
-      "name": "03 GET черновик текущего пользователя",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/api/heating-equipment/draft",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "heating-equipment",
-            "draft"
-          ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ]
-    },
-    {
-      "name": "04 PUT опубликовать услугу",
+      "name": "05 PUT опубликовать услугу",
       "request": {
         "method": "PUT",
         "header": [],
@@ -181,56 +205,19 @@
       ]
     },
     {
-      "name": "05 GET лента без id",
+      "name": "06 DELETE удалить услугу (soft delete)",
       "request": {
-        "method": "GET",
+        "method": "DELETE",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/heating-equipment/feed",
+          "raw": "{{baseUrl}}/api/heating-equipment/{{equipmentId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
             "api",
             "heating-equipment",
-            "feed"
-          ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "if (pm.response.code === 200) { const body = pm.response.json(); pm.collectionVariables.set('feedId', body.id); }"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ]
-    },
-    {
-      "name": "06 GET следующая услуга в ленте по id ?next=true",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/api/heating-equipment/feed/{{feedId}}?next=true",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "heating-equipment",
-            "feed",
-            "{{feedId}}"
-          ],
-          "query": [
-            {
-              "key": "next",
-              "value": "true"
-            }
+            "{{equipmentId}}"
           ]
         }
       },
@@ -247,7 +234,7 @@
       ]
     },
     {
-      "name": "07 POST поставить лайк",
+      "name": "07 POST like (1 поставить / 0 снять)",
       "request": {
         "method": "POST",
         "header": [
@@ -291,36 +278,7 @@
       ]
     },
     {
-      "name": "08 DELETE удалить услугу (soft delete)",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/api/heating-equipment/{{equipmentId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "heating-equipment",
-            "{{equipmentId}}"
-          ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ]
-    },
-    {
-      "name": "09 POST регистрация пользователя",
+      "name": "08 POST регистрация пользователя",
       "request": {
         "method": "POST",
         "header": [
@@ -362,7 +320,7 @@
       ]
     },
     {
-      "name": "10 POST аутентификация (заглушка для ЛР4)",
+      "name": "09 POST аутентификация (заглушка для ЛР4)",
       "request": {
         "method": "POST",
         "header": [
@@ -403,6 +361,35 @@
           }
         }
       ]
+    },
+    {
+      "name": "10 POST деавторизация (заглушка для ЛР4)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/users/logout",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "logout"
+          ]
+        }
+      }
     }
   ]
 }
