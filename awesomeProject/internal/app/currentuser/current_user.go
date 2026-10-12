@@ -1,23 +1,13 @@
 package currentuser
 
-import "sync"
+import "github.com/gin-gonic/gin"
 
-const FixedUserID uint = 1
-
-type User struct {
-	ID uint
-}
-
-var (
-	once     sync.Once
-	instance *User
-)
-
-// Get returns the single current-user instance used in lab 3.
-// Authorization will replace this fixed user in lab 4.
-func Get() *User {
-	once.Do(func() {
-		instance = &User{ID: FixedUserID}
-	})
-	return instance
+// ID belongs to this HTTP request. Zero denotes a guest.
+func ID(c *gin.Context) uint {
+	value, exists := c.Get("user_id")
+	if !exists {
+		return 0
+	}
+	id, _ := value.(uint)
+	return id
 }

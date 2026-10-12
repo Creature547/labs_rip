@@ -1,0 +1,686 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Отопительные приборы — ЛР4",
+    "version": "4.0",
+    "description": "Go / Gin / PostgreSQL / MinIO / Redis. В Authorize вводить Bearer и JWT через пробел. Гостю доступны опубликованные приборы и лента. Регистрация и вход открыты."
+  },
+  "basePath": "/api",
+  "schemes": [
+    "http"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "BearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "Bearer <access_token>"
+    }
+  },
+  "paths": {
+    "/users": {
+      "post": {
+        "summary": "Регистрация",
+        "description": "",
+        "operationId": "Register",
+        "tags": [
+          "Пользователи"
+        ],
+        "responses": {
+          "201": {
+            "description": "Успех",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          },
+          "409": {
+            "description": "Логин занят"
+          }
+        },
+        "parameters": [
+          {
+            "name": "credentials",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Credentials"
+            }
+          }
+        ],
+        "consumes": [
+          "application/json"
+        ]
+      }
+    },
+    "/users/auth": {
+      "post": {
+        "summary": "Вход — получить JWT",
+        "description": "",
+        "operationId": "Authenticate",
+        "tags": [
+          "Пользователи"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успех",
+            "schema": {
+              "$ref": "#/definitions/AuthResponse"
+            }
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          },
+          "401": {
+            "description": "Неверный логин или пароль"
+          }
+        },
+        "parameters": [
+          {
+            "name": "credentials",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Credentials"
+            }
+          }
+        ],
+        "consumes": [
+          "application/json"
+        ]
+      }
+    },
+    "/users/logout": {
+      "post": {
+        "summary": "Выход — заблокировать текущий JWT",
+        "description": "В Redis создаётся blacklist:<jti>, значение — login, TTL — оставшееся время жизни JWT.",
+        "operationId": "Logout",
+        "tags": [
+          "Пользователи"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успех"
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          },
+          "401": {
+            "description": "JWT отсутствует, неверен, истёк или заблокирован"
+          },
+          "503": {
+            "description": "Redis недоступен"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/heating-equipment": {
+      "get": {
+        "summary": "Список опубликованных приборов с фильтром",
+        "description": "Доступен гостю и с любым токеном. Невалидный токен считается гостевым режимом.",
+        "operationId": "List",
+        "tags": [
+          "Приборы"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успех",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Equipment"
+              }
+            }
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": ""
+          },
+          {
+            "name": "min_power",
+            "in": "query",
+            "type": "number",
+            "required": false,
+            "description": ""
+          },
+          {
+            "name": "max_cost",
+            "in": "query",
+            "type": "number",
+            "required": false,
+            "description": ""
+          }
+        ]
+      },
+      "post": {
+        "summary": "Создать черновик с фото и видео",
+        "description": "creator_id берётся из проверенного JWT. power и cost больше нуля. Один черновик на пользователя.",
+        "operationId": "CreateDraft",
+        "tags": [
+          "Приборы"
+        ],
+        "responses": {
+          "201": {
+            "description": "Успех",
+            "schema": {
+              "$ref": "#/definitions/Equipment"
+            }
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          },
+          "401": {
+            "description": "JWT отсутствует, неверен, истёк или заблокирован"
+          },
+          "503": {
+            "description": "Redis недоступен"
+          },
+          "409": {
+            "description": "У пользователя уже есть черновик"
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "formData",
+            "type": "string",
+            "required": true,
+            "description": ""
+          },
+          {
+            "name": "description",
+            "in": "formData",
+            "type": "string",
+            "required": false,
+            "description": ""
+          },
+          {
+            "name": "power",
+            "in": "formData",
+            "type": "number",
+            "required": true,
+            "description": ""
+          },
+          {
+            "name": "cost",
+            "in": "formData",
+            "type": "number",
+            "required": true,
+            "description": ""
+          },
+          {
+            "name": "image",
+            "in": "formData",
+            "type": "file",
+            "required": true,
+            "description": ""
+          },
+          {
+            "name": "video",
+            "in": "formData",
+            "type": "file",
+            "required": true,
+            "description": ""
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ]
+      }
+    },
+    "/heating-equipment/draft": {
+      "get": {
+        "summary": "Получить свой черновик",
+        "description": "",
+        "operationId": "Draft",
+        "tags": [
+          "Приборы"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успех",
+            "schema": {
+              "$ref": "#/definitions/Equipment"
+            }
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          },
+          "401": {
+            "description": "JWT отсутствует, неверен, истёк или заблокирован"
+          },
+          "503": {
+            "description": "Redis недоступен"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/heating-equipment/{id}/publish": {
+      "put": {
+        "summary": "Опубликовать свой черновик",
+        "description": "Меняет status на опубликован и заполняет formed_at. Тело не нужно. Чужой или уже опубликованный прибор — 404.",
+        "operationId": "Publish",
+        "tags": [
+          "Приборы"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успех",
+            "schema": {
+              "$ref": "#/definitions/Publication"
+            }
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          },
+          "401": {
+            "description": "JWT отсутствует, неверен, истёк или заблокирован"
+          },
+          "503": {
+            "description": "Redis недоступен"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "integer",
+            "required": true,
+            "description": "Идентификатор прибора"
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/heating-equipment/{id}": {
+      "delete": {
+        "summary": "Мягко удалить свой прибор",
+        "description": "",
+        "operationId": "Delete",
+        "tags": [
+          "Приборы"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успех"
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          },
+          "401": {
+            "description": "JWT отсутствует, неверен, истёк или заблокирован"
+          },
+          "503": {
+            "description": "Redis недоступен"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "integer",
+            "required": true,
+            "description": "Идентификатор прибора"
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/heating-equipment/{id}/like": {
+      "post": {
+        "summary": "Поставить или снять лайк",
+        "description": "",
+        "operationId": "Like",
+        "tags": [
+          "Приборы"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успех",
+            "schema": {
+              "$ref": "#/definitions/Equipment"
+            }
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          },
+          "401": {
+            "description": "JWT отсутствует, неверен, истёк или заблокирован"
+          },
+          "503": {
+            "description": "Redis недоступен"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "integer",
+            "required": true,
+            "description": "Идентификатор прибора"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Like"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "consumes": [
+          "application/json"
+        ]
+      }
+    },
+    "/heating-equipment/feed": {
+      "get": {
+        "summary": "Первый прибор в ленте",
+        "description": "",
+        "operationId": "Feed",
+        "tags": [
+          "Приборы"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успех",
+            "schema": {
+              "$ref": "#/definitions/Equipment"
+            }
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          }
+        }
+      }
+    },
+    "/heating-equipment/feed/{id}": {
+      "get": {
+        "summary": "Прибор по ID или следующий",
+        "description": "next=true возвращает следующий по ID; после последнего — первый.",
+        "operationId": "FeedByID",
+        "tags": [
+          "Приборы"
+        ],
+        "responses": {
+          "200": {
+            "description": "Успех",
+            "schema": {
+              "$ref": "#/definitions/Equipment"
+            }
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Не найдено"
+          },
+          "500": {
+            "description": "Ошибка сервера"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "integer",
+            "required": true,
+            "description": "Идентификатор прибора"
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "type": "boolean",
+            "required": false,
+            "description": ""
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "Equipment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "power": {
+          "type": "number"
+        },
+        "cost": {
+          "type": "number"
+        },
+        "image_url": {
+          "type": "string"
+        },
+        "video_url": {
+          "type": "string"
+        },
+        "is_creator": {
+          "type": "integer"
+        },
+        "liked": {
+          "type": "integer"
+        },
+        "likes_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "login": {
+          "type": "string"
+        }
+      }
+    },
+    "Credentials": {
+      "type": "object",
+      "properties": {
+        "login": {
+          "type": "string",
+          "example": "anna_lab4"
+        },
+        "password": {
+          "type": "string",
+          "example": "lab4pass"
+        }
+      },
+      "required": [
+        "login",
+        "password"
+      ]
+    },
+    "Like": {
+      "type": "object",
+      "properties": {
+        "like": {
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "required": [
+        "like"
+      ]
+    },
+    "Publication": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "power": {
+          "type": "number"
+        },
+        "cost": {
+          "type": "number"
+        },
+        "image_url": {
+          "type": "string"
+        },
+        "video_url": {
+          "type": "string"
+        },
+        "is_creator": {
+          "type": "integer"
+        },
+        "liked": {
+          "type": "integer"
+        },
+        "likes_count": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "опубликован"
+          ]
+        },
+        "formed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "AuthResponse": {
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "type": "string"
+        },
+        "token_type": {
+          "type": "string",
+          "example": "Bearer"
+        },
+        "expires_in": {
+          "type": "integer",
+          "example": 3600
+        },
+        "user": {
+          "$ref": "#/definitions/User"
+        }
+      }
+    }
+  }
+}

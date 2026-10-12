@@ -1,4 +1,13 @@
 services:
+  redis:
+    container_name: heating_redis
+    image: redis:7.4-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+
   postgres:
     container_name: heating_postgres
     image: postgres:17
@@ -34,5 +43,6 @@ services:
     command: server /data --console-address ":9001"
 
 volumes:
+  redis-data:
   postgres-data:
   minio-data:

@@ -3,6 +3,7 @@ package serializer
 import (
 	"awesomeProject/internal/app/model"
 	"strings"
+	"time"
 )
 
 type HeatingEquipment struct {
@@ -63,4 +64,15 @@ func boolToInt(v bool) int {
 		return 1
 	}
 	return 0
+}
+
+// Publication adds the fields changed by publishing to the normal API view.
+type Publication struct {
+	HeatingEquipment
+	Status   model.StatusType `json:"status"`
+	FormedAt *time.Time       `json:"formed_at"`
+}
+
+func PublicationFromModel(item model.HeatingEquipment, userID uint, mediaBaseURL, bucket string) Publication {
+	return Publication{HeatingEquipment: HeatingEquipmentFromModel(item, userID, mediaBaseURL, bucket), Status: item.Status, FormedAt: item.FormedAt}
 }

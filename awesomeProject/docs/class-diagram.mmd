@@ -23,6 +23,7 @@ classDiagram
         +Delete()
         +Like()
         +Feed()
+        +FeedByID(id, next)
     }
     note for EquipmentDomain "GET /api/heating-equipment; POST /api/heating-equipment; GET /api/heating-equipment/draft; PUT /api/heating-equipment/:id/publish; DELETE /api/heating-equipment/:id; POST /api/heating-equipment/:id/like; GET /api/heating-equipment/feed"
 
@@ -77,10 +78,11 @@ classDiagram
         +likes_count
     }
 
-    class CurrentUserSingleton {
-        <<singleton>>
-        +FixedUserID = 1
-        +Get()
+    class JWTAuthMiddleware {
+        <<middleware>>
+        +JWT claims
+        +Required()
+        +Optional()
     }
 
     class heating_equipment {
@@ -101,7 +103,7 @@ classDiagram
     EquipmentDomain --> HeatingEquipment
     EquipmentDomain --> HeatingEquipmentLike
     EquipmentDomain --> HeatingEquipmentSerializer
-    EquipmentDomain --> CurrentUserSingleton
+    EquipmentDomain --> JWTAuthMiddleware
     UserDomain --> User
 
     HeatingEquipment --> heating_equipment

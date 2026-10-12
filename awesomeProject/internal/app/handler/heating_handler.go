@@ -22,6 +22,18 @@ func NewHeatingEquipmentHandler(repo repository.HeatingEquipmentRepository, medi
 	return &HeatingEquipmentHandler{repo: repo, mediaBaseURL: mediaBaseURL}
 }
 
+// List godoc
+// @Summary Список опубликованных приборов с фильтром
+// @Tags Приборы
+// @Produce json
+// @Param name query string false "name"
+// @Param min_power query number false "min_power"
+// @Param max_cost query number false "max_cost"
+// @Success 200 {array} serializer.HeatingEquipment
+// @Failure 400 "Неверные параметры"
+// @Failure 404 "Не найдено"
+// @Failure 500 "Ошибка сервера"
+// @Router /heating-equipment [get]
 func (h *HeatingEquipmentHandler) List(c *gin.Context) {
 	filter := repository.EquipmentFilter{Name: strings.TrimSpace(c.Query("name"))}
 	if v := c.Query("min_power"); v != "" {
@@ -46,10 +58,30 @@ func (h *HeatingEquipmentHandler) List(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	userID := currentuser.Get().ID
+	userID := currentuser.ID(c)
 	c.JSON(http.StatusOK, serializer.HeatingEquipmentList(items, userID, h.mediaBaseURL, h.repo.MediaBucket()))
 }
 
+// CreateDraft godoc
+// @Summary Создать черновик с фото и видео
+// @Tags Приборы
+// @Produce json
+// @Accept multipart/form-data
+// @Param name formData string true "name"
+// @Param description formData string false "description"
+// @Param power formData number true "power"
+// @Param cost formData number true "cost"
+// @Param image formData file true "image"
+// @Param video formData file true "video"
+// @Success 201 {object} serializer.HeatingEquipment
+// @Failure 400 "Неверные параметры"
+// @Failure 404 "Не найдено"
+// @Failure 500 "Ошибка сервера"
+// @Security BearerAuth
+// @Failure 401 "Не авторизован"
+// @Failure 503 "Redis недоступен"
+// @Failure 409 "Конфликт"
+// @Router /heating-equipment [post]
 func (h *HeatingEquipmentHandler) CreateDraft(c *gin.Context) {
 	if err := c.Request.ParseMultipartForm(64 << 20); err != nil {
 		c.Status(http.StatusBadRequest)
@@ -76,7 +108,7 @@ func (h *HeatingEquipmentHandler) CreateDraft(c *gin.Context) {
 		return
 	}
 
-	item, err := h.repo.CreateDraft(currentuser.Get().ID, repository.DraftData{
+	item, err := h.repo.CreateDraft(currentuser.ID(c), repository.DraftData{
 		Name: name, Description: description, Power: power, Cost: cost,
 	}, image, video)
 	if err != nil {
@@ -88,41 +120,86 @@ func (h *HeatingEquipmentHandler) CreateDraft(c *gin.Context) {
 		}
 		return
 	}
-	c.JSON(http.StatusCreated, serializer.HeatingEquipmentFromModel(*item, currentuser.Get().ID, h.mediaBaseURL, h.repo.MediaBucket()))
+	c.JSON(http.StatusCreated, serializer.HeatingEquipmentFromModel(*item, currentuser.ID(c), h.mediaBaseURL, h.repo.MediaBucket()))
 }
 
+// Draft godoc
+// @Summary Получить свой черновик
+// @Tags Приборы
+// @Produce json
+// @Success 200 {object} serializer.HeatingEquipment
+// @Failure 400 "Неверные параметры"
+// @Failure 404 "Не найдено"
+// @Failure 500 "Ошибка сервера"
+// @Security BearerAuth
+// @Failure 401 "Не авторизован"
+// @Failure 503 "Redis недоступен"
+// @Router /heating-equipment/draft [get]
 func (h *HeatingEquipmentHandler) Draft(c *gin.Context) {
-	item, err := h.repo.GetDraft(currentuser.Get().ID)
+	item, err := h.repo.GetDraft(currentuser.ID(c))
 	if err != nil {
 		handleRepositoryError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, serializer.HeatingEquipmentFromModel(*item, currentuser.Get().ID, h.mediaBaseURL, h.repo.MediaBucket()))
+	c.JSON(http.StatusOK, serializer.HeatingEquipmentFromModel(*item, currentuser.ID(c), h.mediaBaseURL, h.repo.MediaBucket()))
 }
 
+// Publish godoc
+// @Summary Опубликовать свой черновик
+// @Tags Приборы
+// @Produce json
+// @Param id path integer true "Идентификатор прибора"
+// @Success 200 {object} serializer.Publication
+// @Failure 400 "Неверные параметры"
+// @Failure 404 "Не найдено"
+// @Failure 500 "Ошибка сервера"
+// @Security BearerAuth
+// @Failure 401 "Не авторизован"
+// @Failure 503 "Redis недоступен"
+// @Router /heating-equipment/{id}/publish [put]
 func (h *HeatingEquipmentHandler) Publish(c *gin.Context) {
 	id, ok := parsePositiveID(c.Param("id"))
 	if !ok {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	item, err := h.repo.PublishDraft(currentuser.Get().ID, id)
+	item, err := h.repo.PublishDraft(currentuser.ID(c), id)
 	if err != nil {
 		handleRepositoryError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, serializer.HeatingEquipmentFromModel(*item, currentuser.Get().ID, h.mediaBaseURL, h.repo.MediaBucket()))
+	c.JSON(http.StatusOK, serializer.PublicationFromModel(*item, currentuser.ID(c), h.mediaBaseURL, h.repo.MediaBucket()))
 }
 
+// Feed godoc
+// @Summary Первый прибор в ленте
+// @Tags Приборы
+// @Produce json
+// @Success 200 {object} serializer.HeatingEquipment
+// @Failure 400 "Неверные параметры"
+// @Failure 404 "Не найдено"
+// @Failure 500 "Ошибка сервера"
+// @Router /heating-equipment/feed [get]
 func (h *HeatingEquipmentHandler) Feed(c *gin.Context) {
 	item, err := h.repo.GetFirstPublished()
 	if err != nil {
 		handleRepositoryError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, serializer.HeatingEquipmentFromModel(*item, currentuser.Get().ID, h.mediaBaseURL, h.repo.MediaBucket()))
+	c.JSON(http.StatusOK, serializer.HeatingEquipmentFromModel(*item, currentuser.ID(c), h.mediaBaseURL, h.repo.MediaBucket()))
 }
 
+// FeedByID godoc
+// @Summary Прибор по ID или следующий
+// @Tags Приборы
+// @Produce json
+// @Param id path integer true "Идентификатор прибора"
+// @Param next query boolean false "next"
+// @Success 200 {object} serializer.HeatingEquipment
+// @Failure 400 "Неверные параметры"
+// @Failure 404 "Не найдено"
+// @Failure 500 "Ошибка сервера"
+// @Router /heating-equipment/feed/{id} [get]
 func (h *HeatingEquipmentHandler) FeedByID(c *gin.Context) {
 	id, ok := parsePositiveID(c.Param("id"))
 	if !ok {
@@ -145,7 +222,7 @@ func (h *HeatingEquipmentHandler) FeedByID(c *gin.Context) {
 		http.StatusOK,
 		serializer.HeatingEquipmentFromModel(
 			*modelItem,
-			currentuser.Get().ID,
+			currentuser.ID(c),
 			h.mediaBaseURL,
 			h.repo.MediaBucket(),
 		),
@@ -156,6 +233,21 @@ type likeRequest struct {
 	Like *int `json:"like" binding:"required"`
 }
 
+// Like godoc
+// @Summary Поставить или снять лайк
+// @Tags Приборы
+// @Produce json
+// @Accept json
+// @Param id path integer true "Идентификатор прибора"
+// @Param body body likeRequest true "body"
+// @Success 200 {object} serializer.HeatingEquipment
+// @Failure 400 "Неверные параметры"
+// @Failure 404 "Не найдено"
+// @Failure 500 "Ошибка сервера"
+// @Security BearerAuth
+// @Failure 401 "Не авторизован"
+// @Failure 503 "Redis недоступен"
+// @Router /heating-equipment/{id}/like [post]
 func (h *HeatingEquipmentHandler) Like(c *gin.Context) {
 	id, ok := parsePositiveID(c.Param("id"))
 	if !ok {
@@ -167,21 +259,34 @@ func (h *HeatingEquipmentHandler) Like(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	item, err := h.repo.SetLike(currentuser.Get().ID, id, *req.Like)
+	item, err := h.repo.SetLike(currentuser.ID(c), id, *req.Like)
 	if err != nil {
 		handleRepositoryError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, serializer.HeatingEquipmentFromModel(*item, currentuser.Get().ID, h.mediaBaseURL, h.repo.MediaBucket()))
+	c.JSON(http.StatusOK, serializer.HeatingEquipmentFromModel(*item, currentuser.ID(c), h.mediaBaseURL, h.repo.MediaBucket()))
 }
 
+// Delete godoc
+// @Summary Мягко удалить свой прибор
+// @Tags Приборы
+// @Produce json
+// @Param id path integer true "Идентификатор прибора"
+// @Success 200 "Успех"
+// @Failure 400 "Неверные параметры"
+// @Failure 404 "Не найдено"
+// @Failure 500 "Ошибка сервера"
+// @Security BearerAuth
+// @Failure 401 "Не авторизован"
+// @Failure 503 "Redis недоступен"
+// @Router /heating-equipment/{id} [delete]
 func (h *HeatingEquipmentHandler) Delete(c *gin.Context) {
 	id, ok := parsePositiveID(c.Param("id"))
 	if !ok {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if err := h.repo.SoftDelete(currentuser.Get().ID, id); err != nil {
+	if err := h.repo.SoftDelete(currentuser.ID(c), id); err != nil {
 		handleRepositoryError(c, err)
 		return
 	}

@@ -62,6 +62,7 @@ type HeatingEquipmentRepository interface {
 
 type UserRepository interface {
 	RegisterUser(login, passwordHash string) (*model.User, error)
+	GetUserByLogin(login string) (*model.User, error)
 }
 
 type PostgresRepository struct {
@@ -323,4 +324,16 @@ func normalizeNotFound(item *model.HeatingEquipment, err error) (*model.HeatingE
 		return nil, err
 	}
 	return item, nil
+}
+
+func (r *PostgresRepository) GetUserByLogin(login string) (*model.User, error) {
+	var user model.User
+	err := r.db.Where("login = ?", login).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
