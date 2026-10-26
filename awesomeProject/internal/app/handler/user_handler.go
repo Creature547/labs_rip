@@ -66,9 +66,9 @@ func (h *UserHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, serializer.UserFromModel(*user))
 }
 
-// Authenticate checks the stored bcrypt hash and issues a signed JWT.
+// Authenticate checks the password, creates a Redis session and issues a linked JWT.
 // Authenticate godoc
-// @Summary Вход — получить JWT
+// @Summary Вход — получить JWT и cookie сессии
 // @Tags Пользователи
 // @Produce json
 // @Accept json
@@ -99,17 +99,26 @@ func (h *UserHandler) Authenticate(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid login or password"})
 		return
 	}
-	token, err := h.auth.Issue(user.ID, user.Login)
+	sessionID, err := h.auth.CreateSession(c.Request.Context(), user.ID, user.Login)
 	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Redis unavailable; session was not created"})
+		return
+	}
+	token, err := h.auth.IssueForSession(user.ID, user.Login, sessionID)
+	if err != nil {
+		_ = h.auth.DeleteSession(c.Request.Context(), sessionID)
 		c.Status(http.StatusInternalServerError)
 		return
+	}
+	if sessionID != "" {
+		h.auth.SetSessionCookie(c, sessionID, int(h.auth.ExpiresIn()))
 	}
 	c.JSON(http.StatusOK, gin.H{"access_token": token, "token_type": "Bearer", "expires_in": h.auth.ExpiresIn(), "user": serializer.UserFromModel(*user)})
 }
 
-// Logout blocks this JWT until its original expiration time.
+// Logout deletes the active session and revokes the supplied JWT, if any.
 // Logout godoc
-// @Summary Выход — заблокировать текущий JWT
+// @Summary Выход — удалить сессию и отозвать JWT
 // @Tags Пользователи
 // @Produce json
 // @Success 200 "Успех"
@@ -127,10 +136,17 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		c.Status(http.StatusUnauthorized)
 		return
 	}
-	if err := h.auth.Revoke(c.Request.Context(), claims); err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Redis unavailable; token was not revoked"})
+	if claims.ID != "" {
+		if err := h.auth.Revoke(c.Request.Context(), claims); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Redis unavailable; token was not revoked"})
+			return
+		}
+	}
+	if err := h.auth.DeleteSession(c.Request.Context(), claims.SessionID); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Redis unavailable; session was not deleted"})
 		return
 	}
+	h.auth.SetSessionCookie(c, "", -1)
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
 

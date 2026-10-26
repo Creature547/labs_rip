@@ -1,0 +1,515 @@
+{
+  "info": {
+    "name": "ЛР4 — cookie-сессии — белые галочки",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://172.31.200.120:8080"
+    },
+    {
+      "key": "login",
+      "value": "anna_lab4"
+    },
+    {
+      "key": "password",
+      "value": "lab4pass"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "equipment_id",
+      "value": "1"
+    },
+    {
+      "key": "invalid_token",
+      "value": "invalid",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Методы API",
+      "item": [
+        {
+          "name": "Регистрация",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/users",
+            "description": "Регистрация",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{login}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Вход — JWT и активная сессия",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/users/auth",
+            "description": "Вход — получить JWT",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{login}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) pm.collectionVariables.set(\"token\", pm.response.json().access_token);",
+                  "if (pm.response.code === 200) {",
+                  "  const setCookie = pm.response.headers.get(\"Set-Cookie\") || \"\";",
+                  "  const match = setCookie.match(/session_id=([^;]+)/);",
+                  "  if (match) pm.collectionVariables.set(\"session_id\", match[1]);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Выход — удалить текущую сессию",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "disabled": false
+              }
+            ],
+            "url": "{{base_url}}/api/users/logout",
+            "description": "Выход — заблокировать текущий JWT",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Список опубликованных приборов с фильтром",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/heating-equipment",
+            "description": "Список опубликованных приборов с фильтром",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Создать черновик с фото и видео",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "disabled": false
+              }
+            ],
+            "url": "{{base_url}}/api/heating-equipment",
+            "description": "Создать черновик с фото и видео",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Радиатор ЛР4",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Прибор для проверки публикации",
+                  "type": "text"
+                },
+                {
+                  "key": "power",
+                  "value": "2.5",
+                  "type": "text"
+                },
+                {
+                  "key": "cost",
+                  "value": "7500",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "sample-image.png"
+                },
+                {
+                  "key": "video",
+                  "type": "file",
+                  "src": "sample-video.mp4"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"equipment_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Получить свой черновик",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "disabled": false
+              }
+            ],
+            "url": "{{base_url}}/api/heating-equipment/draft",
+            "description": "Получить свой черновик",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Опубликовать свой черновик",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "disabled": false
+              }
+            ],
+            "url": "{{base_url}}/api/heating-equipment/{{equipment_id}}/publish",
+            "description": "Опубликовать свой черновик",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Мягко удалить свой прибор",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "disabled": false
+              }
+            ],
+            "url": "{{base_url}}/api/heating-equipment/{{equipment_id}}",
+            "description": "Мягко удалить свой прибор",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Поставить или снять лайк",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "session_id={{session_id}}",
+                "disabled": false
+              }
+            ],
+            "url": "{{base_url}}/api/heating-equipment/{{equipment_id}}/like",
+            "description": "Поставить или снять лайк",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"like\":1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Первый прибор в ленте",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/heating-equipment/feed",
+            "description": "Первый прибор в ленте",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Прибор по ID или следующий",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/heating-equipment/feed/{{equipment_id}}?next=true",
+            "description": "Прибор по ID или следующий",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Проверки доступа",
+      "item": [
+        {
+          "name": "Проверка: публикация гостем — 401",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/heating-equipment/{{equipment_id}}/publish",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "",
+                "disabled": false
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Guest receives 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Проверка: список с неверным JWT — 200",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/heating-equipment",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{invalid_token}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Public list remains available\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        }
+      ]
+    }
+  ]
+}

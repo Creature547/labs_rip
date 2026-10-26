@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "ЛР4 — отопительные приборы",
+    "name": "ЛР4 — отопительные приборы — JWT и сессии",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -28,6 +28,10 @@
       "key": "invalid_token",
       "value": "invalid",
       "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": ""
     }
   ],
   "item": [
@@ -69,10 +73,13 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
-          "name": "Вход — получить JWT",
+          "name": "Вход — JWT и активная сессия",
           "request": {
             "method": "POST",
             "header": [
@@ -103,28 +110,35 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-                  "if (pm.response.code === 200) pm.collectionVariables.set(\"token\", pm.response.json().access_token);"
+                  "if (pm.response.code === 200) pm.collectionVariables.set(\"token\", pm.response.json().access_token);",
+                  "if (pm.response.code === 200) {",
+                  "  const setCookie = pm.response.headers.get(\"Set-Cookie\") || \"\";",
+                  "  const match = setCookie.match(/session_id=([^;]+)/);",
+                  "  if (match) pm.collectionVariables.set(\"session_id\", match[1]);",
+                  "}"
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
-          "name": "Выход — заблокировать текущий JWT",
+          "name": "Выход — удалить сессию и отозвать JWT",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "disabled": false
+              }
+            ],
             "url": "{{base_url}}/api/users/logout",
             "description": "Выход — заблокировать текущий JWT",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             }
           },
           "event": [
@@ -137,7 +151,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Список опубликованных приборов с фильтром",
@@ -160,24 +177,26 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Создать черновик с фото и видео",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "disabled": false
+              }
+            ],
             "url": "{{base_url}}/api/heating-equipment",
             "description": "Создать черновик с фото и видео",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             },
             "body": {
               "mode": "formdata",
@@ -226,24 +245,26 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Получить свой черновик",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "disabled": false
+              }
+            ],
             "url": "{{base_url}}/api/heating-equipment/draft",
             "description": "Получить свой черновик",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             }
           },
           "event": [
@@ -256,24 +277,26 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Опубликовать свой черновик",
           "request": {
             "method": "PUT",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "disabled": false
+              }
+            ],
             "url": "{{base_url}}/api/heating-equipment/{{equipment_id}}/publish",
             "description": "Опубликовать свой черновик",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             }
           },
           "event": [
@@ -286,24 +309,26 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Мягко удалить свой прибор",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "disabled": false
+              }
+            ],
             "url": "{{base_url}}/api/heating-equipment/{{equipment_id}}",
             "description": "Мягко удалить свой прибор",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             }
           },
           "event": [
@@ -316,7 +341,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Поставить или снять лайк",
@@ -326,19 +354,17 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "disabled": false
               }
             ],
             "url": "{{base_url}}/api/heating-equipment/{{equipment_id}}/like",
             "description": "Поставить или снять лайк",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             },
             "body": {
               "mode": "raw",
@@ -360,7 +386,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Первый прибор в ленте",
@@ -383,7 +412,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Прибор по ID или следующий",
@@ -406,7 +438,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     },
@@ -420,7 +455,14 @@
             "url": "{{base_url}}/api/heating-equipment/{{equipment_id}}/publish",
             "auth": {
               "type": "noauth"
-            }
+            },
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "",
+                "disabled": false
+              }
+            ]
           },
           "event": [
             {
@@ -432,7 +474,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         },
         {
           "name": "Проверка: список с неверным JWT — 200",
@@ -459,7 +504,10 @@
                 ]
               }
             }
-          ]
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
         }
       ]
     }

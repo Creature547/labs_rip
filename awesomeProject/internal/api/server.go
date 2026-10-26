@@ -7,6 +7,7 @@ import (
 	"awesomeProject/internal/app/handler"
 	"awesomeProject/internal/app/repository"
 	"context"
+	"errors"
 	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -51,6 +52,16 @@ func StartServer() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	service.SetSessions(&auth.RedisSessions{Client: redisClient, Lookup: func(login string) (uint, error) {
+		user, err := repo.GetUserByLogin(login)
+		if errors.Is(err, repository.ErrNotFound) {
+			return 0, auth.ErrInvalidToken
+		}
+		if err != nil {
+			return 0, err
+		}
+		return user.ID, nil
+	}})
 	r := NewRouter(repo, repo, os.Getenv("MINIO_PUBLIC_URL"), service)
 	if err := r.Run("0.0.0.0:8080"); err != nil {
 		log.Fatal(err)
