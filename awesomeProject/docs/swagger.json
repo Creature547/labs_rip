@@ -66,8 +66,8 @@
     },
     "/users/auth": {
       "post": {
-        "summary": "Вход — получить JWT и cookie активной сессии",
-        "description": "После проверки пароля создаётся session:<случайный ID> = login в Redis с TTL 3600 с. Ответ устанавливает HttpOnly cookie session_id и возвращает JWT. JWT связан с созданной сессией.",
+        "summary": "Аутентификация — получить JWT",
+        "description": "Проверяет логин и пароль и возвращает подписанный JWT.",
         "operationId": "Authenticate",
         "tags": [
           "Пользователи"
@@ -78,12 +78,7 @@
             "schema": {
               "$ref": "#/definitions/AuthResponse"
             },
-            "headers": {
-              "Set-Cookie": {
-                "type": "string",
-                "description": "session_id=<random ID>; Path=/; Max-Age=3600; HttpOnly; SameSite=Lax"
-              }
-            }
+            "headers": {}
           },
           "400": {
             "description": "Неверные параметры"
@@ -115,8 +110,8 @@
     },
     "/users/logout": {
       "post": {
-        "summary": "Выход — удалить сессию и отозвать переданный JWT",
-        "description": "Принимает Authorization: Bearer JWT или Cookie: session_id=<ID>. Удаляет активную сессию и cookie. Если передан JWT, его jti также добавляется в blacklist до истечения срока. Связанный JWT становится недействительным и при выходе по cookie.",
+        "summary": "Выход — отозвать JWT",
+        "description": "Идентификатор JWT помещается в blacklist Redis до истечения срока токена.",
         "operationId": "Logout",
         "tags": [
           "Пользователи"
@@ -202,7 +197,7 @@
       },
       "post": {
         "summary": "Создать черновик с фото и видео",
-        "description": "creator_id берётся из проверенного JWT. power и cost больше нуля. Один черновик на пользователя. Аутентификация: Bearer JWT либо cookie session_id действующей сессии. В браузере Swagger cookie отправляется автоматически. Явный Authorization имеет приоритет; неверный JWT не заменяется cookie.",
+        "description": "creator_id берётся из проверенного JWT. power и cost больше нуля. Один черновик на пользователя.  Аутентификация: Authorization: Bearer JWT.",
         "operationId": "CreateDraft",
         "tags": [
           "Приборы"
@@ -290,7 +285,7 @@
     "/heating-equipment/draft": {
       "get": {
         "summary": "Получить свой черновик",
-        "description": "Аутентификация: Bearer JWT либо cookie session_id действующей сессии. В браузере Swagger cookie отправляется автоматически. Явный Authorization имеет приоритет; неверный JWT не заменяется cookie.",
+        "description": " Аутентификация: Authorization: Bearer JWT.",
         "operationId": "Draft",
         "tags": [
           "Приборы"
@@ -328,7 +323,7 @@
     "/heating-equipment/{id}/publish": {
       "put": {
         "summary": "Опубликовать свой черновик",
-        "description": "Меняет status на опубликован и заполняет formed_at. Тело не нужно. Чужой или уже опубликованный прибор — 404. Аутентификация: Bearer JWT либо cookie session_id действующей сессии. В браузере Swagger cookie отправляется автоматически. Явный Authorization имеет приоритет; неверный JWT не заменяется cookie.",
+        "description": "Меняет status на опубликован и заполняет formed_at. Тело не нужно. Чужой или уже опубликованный прибор — 404.  Аутентификация: Authorization: Bearer JWT.",
         "operationId": "Publish",
         "tags": [
           "Приборы"
@@ -375,7 +370,7 @@
     "/heating-equipment/{id}": {
       "delete": {
         "summary": "Мягко удалить свой прибор",
-        "description": "Аутентификация: Bearer JWT либо cookie session_id действующей сессии. В браузере Swagger cookie отправляется автоматически. Явный Authorization имеет приоритет; неверный JWT не заменяется cookie.",
+        "description": " Аутентификация: Authorization: Bearer JWT.",
         "operationId": "Delete",
         "tags": [
           "Приборы"
@@ -419,7 +414,7 @@
     "/heating-equipment/{id}/like": {
       "post": {
         "summary": "Поставить или снять лайк",
-        "description": "Аутентификация: Bearer JWT либо cookie session_id действующей сессии. В браузере Swagger cookie отправляется автоматически. Явный Authorization имеет приоритет; неверный JWT не заменяется cookie.",
+        "description": " Аутентификация: Authorization: Bearer JWT.",
         "operationId": "Like",
         "tags": [
           "Приборы"

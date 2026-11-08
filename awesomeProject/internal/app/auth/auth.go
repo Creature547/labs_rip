@@ -20,10 +20,9 @@ const Issuer = "heating-api"
 var ErrInvalidToken = errors.New("invalid token")
 
 type Claims struct {
-	UserID    uint   `json:"user_id"`
-	Login     string `json:"login"`
-	Role      string `json:"role"`
-	SessionID string `json:"sid,omitempty"`
+	UserID uint   `json:"user_id"`
+	Login  string `json:"login"`
+	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -49,7 +48,6 @@ type Service struct {
 	secret    []byte
 	blacklist Blacklist
 	ttl       time.Duration
-	sessions  SessionStore
 }
 
 func New(secret string, blacklist Blacklist, ttl time.Duration) (*Service, error) {
@@ -59,15 +57,13 @@ func New(secret string, blacklist Blacklist, ttl time.Duration) (*Service, error
 	return &Service{secret: []byte(secret), blacklist: blacklist, ttl: ttl}, nil
 }
 func (s *Service) Issue(userID uint, login string) (string, error) {
-	return s.IssueForSession(userID, login, "")
-}
-func (s *Service) IssueForSession(userID uint, login, sessionID string) (string, error) {
+
 	nonce := make([]byte, 16)
 	if _, err := rand.Read(nonce); err != nil {
 		return "", err
 	}
 	now := time.Now()
-	claims := Claims{UserID: userID, Login: login, Role: "creator", SessionID: sessionID, RegisteredClaims: jwt.RegisteredClaims{
+	claims := Claims{UserID: userID, Login: login, Role: "creator", RegisteredClaims: jwt.RegisteredClaims{
 		Issuer: Issuer, Subject: strconv.FormatUint(uint64(userID), 10),
 		ID: hex.EncodeToString(nonce), IssuedAt: jwt.NewNumericDate(now),
 		ExpiresAt: jwt.NewNumericDate(now.Add(s.ttl)),
@@ -89,18 +85,6 @@ func (s *Service) Verify(ctx context.Context, raw string) (*Claims, error) {
 	}
 	if blocked {
 		return nil, ErrInvalidToken
-	}
-	if claims.SessionID != "" {
-		if s.sessions == nil {
-			return nil, ErrInvalidToken
-		}
-		user, err := s.sessions.Get(ctx, claims.SessionID)
-		if err != nil {
-			return nil, err
-		}
-		if user.ID != claims.UserID || user.Login != claims.Login {
-			return nil, ErrInvalidToken
-		}
 	}
 	return claims, nil
 }
@@ -141,4 +125,12 @@ func bearer(header string) string {
 		return ""
 	}
 	return parts[1]
+}
+
+func (s *Service) requestClaims(c *gin.Context) (*Claims, error) {
+	raw := bearer(c.GetHeader("Authorization"))
+	if raw == "" {
+		return nil, ErrInvalidToken
+	}
+	return s.Verify(c.Request.Context(), raw)
 }
