@@ -5,6 +5,7 @@ import (
 	"awesomeProject/internal/app/repository"
 	"awesomeProject/internal/app/serializer"
 	"errors"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -29,7 +30,10 @@ func NewHeatingEquipmentHandler(repo repository.HeatingEquipmentRepository, medi
 // @Param name query string false "name"
 // @Param min_power query number false "min_power"
 // @Param max_cost query number false "max_cost"
-// @Success 200 {array} serializer.HeatingEquipment
+// @Param page query integer false "Страница, начиная с 1" default(1)
+// @Param limit query integer false "Размер страницы, от 1 до 100" default(12)
+// @Param sort query string false "new, price или power" default(new)
+// @Success 200 {object} serializer.EquipmentPage
 // @Failure 400 "Неверные параметры"
 // @Failure 404 "Не найдено"
 // @Failure 500 "Ошибка сервера"
@@ -38,7 +42,7 @@ func (h *HeatingEquipmentHandler) List(c *gin.Context) {
 	filter := repository.EquipmentFilter{Name: strings.TrimSpace(c.Query("name"))}
 	if v := c.Query("min_power"); v != "" {
 		parsed, err := strconv.ParseFloat(v, 64)
-		if err != nil || parsed < 0 {
+		if err != nil || parsed < 0 || math.IsNaN(parsed) || math.IsInf(parsed, 0) {
 			c.Status(http.StatusBadRequest)
 			return
 		}
@@ -46,20 +50,31 @@ func (h *HeatingEquipmentHandler) List(c *gin.Context) {
 	}
 	if v := c.Query("max_cost"); v != "" {
 		parsed, err := strconv.ParseFloat(v, 64)
-		if err != nil || parsed < 0 {
+		if err != nil || parsed < 0 || math.IsNaN(parsed) || math.IsInf(parsed, 0) {
 			c.Status(http.StatusBadRequest)
 			return
 		}
 		filter.MaxCost = &parsed
 	}
 
-	items, err := h.repo.ListPublished(filter)
+	page, pageErr := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, limitErr := strconv.Atoi(c.DefaultQuery("limit", "12"))
+	sort := c.DefaultQuery("sort", "new")
+	if pageErr != nil || limitErr != nil || page < 1 || page > 1000000 ||
+		limit < 1 || limit > 100 || (sort != "new" && sort != "price" && sort != "power") {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	items, total, err := h.repo.ListPublished(c.Request.Context(), filter, limit, (page-1)*limit, sort)
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
 	userID := currentuser.ID(c)
-	c.JSON(http.StatusOK, serializer.HeatingEquipmentList(items, userID, h.mediaBaseURL, h.repo.MediaBucket()))
+	c.JSON(http.StatusOK, serializer.EquipmentPage{
+		Data: serializer.HeatingEquipmentList(items, userID, h.mediaBaseURL, h.repo.MediaBucket()),
+		Page: page, Limit: limit, Total: total,
+	})
 }
 
 // CreateDraft godoc

@@ -51,13 +51,13 @@ func StartServer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	r := NewRouter(repo, repo, os.Getenv("MINIO_PUBLIC_URL"), service)
+	r := NewRouter(repo, repo, os.Getenv("MINIO_PUBLIC_URL"), service, handler.NewSessionFeed(repo, redisClient, os.Getenv("MINIO_PUBLIC_URL")))
 	if err := r.Run("0.0.0.0:8080"); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func NewRouter(equipmentRepo repository.HeatingEquipmentRepository, userRepo repository.UserRepository, mediaBaseURL string, service *auth.Service) *gin.Engine {
+func NewRouter(equipmentRepo repository.HeatingEquipmentRepository, userRepo repository.UserRepository, mediaBaseURL string, service *auth.Service, feeds ...*handler.SessionFeed) *gin.Engine {
 	r := gin.Default()
 	r.MaxMultipartMemory = 64 << 20
 
@@ -74,6 +74,9 @@ func NewRouter(equipmentRepo repository.HeatingEquipmentRepository, userRepo rep
 		api.DELETE("/heating-equipment/:id", service.Required(), equipment.Delete)
 		api.POST("/heating-equipment/:id/like", service.Required(), equipment.Like)
 
+		if len(feeds) > 0 {
+			api.GET("/heating-equipment/session-feed", service.Optional(), feeds[0].Get)
+		}
 		api.GET("/heating-equipment/feed", service.Optional(), equipment.Feed)
 		api.GET("/heating-equipment/feed/:id", service.Optional(), equipment.FeedByID)
 

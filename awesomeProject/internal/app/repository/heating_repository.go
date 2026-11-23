@@ -48,7 +48,7 @@ type DraftData struct {
 }
 
 type HeatingEquipmentRepository interface {
-	ListPublished(filter EquipmentFilter) ([]model.HeatingEquipment, error)
+	ListPublished(ctx context.Context, filter EquipmentFilter, limit, offset int, sort string) ([]model.HeatingEquipment, int64, error)
 	GetDraft(creatorID uint) (*model.HeatingEquipment, error)
 	CreateDraft(creatorID uint, data DraftData, image, video *multipart.FileHeader) (*model.HeatingEquipment, error)
 	PublishDraft(creatorID, equipmentID uint) (*model.HeatingEquipment, error)
@@ -118,9 +118,9 @@ func (r *PostgresRepository) ensureBucket(ctx context.Context) error {
 	return r.minio.SetBucketPolicy(ctx, r.bucket, policy)
 }
 
-func (r *PostgresRepository) ListPublished(filter EquipmentFilter) ([]model.HeatingEquipment, error) {
+func (r *PostgresRepository) ListPublished(ctx context.Context, filter EquipmentFilter, limit, offset int, sort string) ([]model.HeatingEquipment, int64, error) {
 	items := make([]model.HeatingEquipment, 0)
-	q := r.db.Preload("Likes").Where("status = ?", model.StatusPublished)
+	q := r.db.WithContext(ctx).Model(&model.HeatingEquipment{}).Where("status = ?", model.StatusPublished)
 	if filter.Name != "" {
 		q = q.Where("LOWER(equipment_name) LIKE ?", "%"+strings.ToLower(filter.Name)+"%")
 	}
@@ -130,10 +130,30 @@ func (r *PostgresRepository) ListPublished(filter EquipmentFilter) ([]model.Heat
 	if filter.MaxCost != nil {
 		q = q.Where("cost_rub <= ?", *filter.MaxCost)
 	}
-	if err := q.Order("id ASC").Find(&items).Error; err != nil {
-		return nil, err
+	var total int64
+	if err := q.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
-	return items, nil
+	switch sort {
+	case "price":
+		q = q.Order("cost_rub ASC NULLS LAST, id DESC")
+	case "power":
+		q = q.Order("power_kw ASC NULLS LAST, id ASC")
+	default:
+		q = q.Order("id DESC")
+	}
+	err := q.Preload("Likes").Limit(limit).Offset(offset).Find(&items).Error
+	return items, total, err
+}
+
+func (r *PostgresRepository) RandomPublishedIDs(ctx context.Context, limit int, exclude []uint) ([]uint, error) {
+	var ids []uint
+	q := r.db.WithContext(ctx).Model(&model.HeatingEquipment{}).Where("status = ?", model.StatusPublished)
+	if len(exclude) > 0 {
+		q = q.Where("id NOT IN ?", exclude)
+	}
+	err := q.Order("random()").Limit(limit).Pluck("id", &ids).Error
+	return ids, err
 }
 
 func (r *PostgresRepository) GetDraft(creatorID uint) (*model.HeatingEquipment, error) {

@@ -153,12 +153,9 @@
         ],
         "responses": {
           "200": {
-            "description": "Успех",
+            "description": "OK",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Equipment"
-              }
+              "$ref": "#/definitions/serializer.EquipmentPage"
             }
           },
           "400": {
@@ -173,25 +170,43 @@
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "query",
             "type": "string",
-            "required": false,
-            "description": ""
+            "description": "name",
+            "name": "name",
+            "in": "query"
           },
           {
+            "type": "number",
+            "description": "min_power",
             "name": "min_power",
-            "in": "query",
-            "type": "number",
-            "required": false,
-            "description": ""
+            "in": "query"
           },
           {
-            "name": "max_cost",
-            "in": "query",
             "type": "number",
-            "required": false,
-            "description": ""
+            "description": "max_cost",
+            "name": "max_cost",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "default": 1,
+            "description": "Страница, начиная с 1",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "default": 12,
+            "description": "Размер страницы, от 1 до 100",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "default": "new",
+            "description": "new, price или power",
+            "name": "sort",
+            "in": "query"
           }
         ]
       },
@@ -538,6 +553,50 @@
           }
         ]
       }
+    },
+    "/heating-equipment/session-feed": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Приборы"
+        ],
+        "summary": "Карточка из случайной ленты текущей сессии",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Случайный идентификатор из 32 hex-символов",
+            "name": "session",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "default": 1,
+            "description": "Сквозной порядковый номер карточки",
+            "name": "position",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/handler.SessionFeedCard"
+            }
+          },
+          "400": {
+            "description": "Неверные параметры"
+          },
+          "404": {
+            "description": "Приборы отсутствуют"
+          },
+          "503": {
+            "description": "Redis недоступен"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -680,6 +739,37 @@
         },
         "user": {
           "$ref": "#/definitions/User"
+        }
+      }
+    },
+    "serializer.EquipmentPage": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/serializer.HeatingEquipment"
+          }
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "page": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        }
+      }
+    },
+    "handler.SessionFeedCard": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/serializer.HeatingEquipment"
+        },
+        "position": {
+          "type": "integer"
         }
       }
     }

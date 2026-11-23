@@ -76,3 +76,10 @@ type Publication struct {
 func PublicationFromModel(item model.HeatingEquipment, userID uint, mediaBaseURL, bucket string) Publication {
 	return Publication{HeatingEquipment: HeatingEquipmentFromModel(item, userID, mediaBaseURL, bucket), Status: item.Status, FormedAt: item.FormedAt}
 }
+
+type EquipmentPage struct {
+	Data  []HeatingEquipment `json:"data"`
+	Page  int                `json:"page"`
+	Limit int                `json:"limit"`
+	Total int64              `json:"total"`
+}
